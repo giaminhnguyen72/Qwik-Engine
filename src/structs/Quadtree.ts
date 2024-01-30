@@ -26,6 +26,7 @@ export class QuadTree<T extends Rectangular> {
         this.getQuad.set(item, quadNode)
         return quadNode
     }
+    //Error
     remove(item: T) {
         let quadNode = this.getQuad.get(item)
         if (quadNode) {
@@ -82,16 +83,19 @@ class QuadTreeNode<T extends Rectangular> {
         }
     }
     remove(item: T): boolean {
-        for (let i = this.items.length - 1; i >= 0; i --) {
+        console.log(item)
+        for (let i = this.items.length - 1; i >= 0; i--) {
             if (this.items[i] == item) {
                 this.items[i] = this.items[this.items.length - 1]
                 this.items.pop()
                 return true
             } 
         }
+
+        
         for (let i of this.children) {
             if (i.remove(item)) {
-                return true
+                return true 
             }
         }
         return false

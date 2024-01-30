@@ -18,4 +18,9 @@ export interface Force {
     y: number
     z: number
 }
+export interface Vector3 {
+    x: number
+    y: number
+    z: number
+}
 

@@ -3,9 +3,10 @@ import { Server, Socket } from "socket.io"
 import { Socket as SocketClient } from "socket.io-client"
 import { EngineType } from "../constants/engineType.js"
 import { Collideable, Component } from "../types/components.js"
+import { Vector3 } from "../types/components/physics/transformType.js"
 import { Entity } from "../types/Entity.js"
 import { System } from "../types/system.js"
-import { SocketManager } from "./managers/SocketManager.js"
+import { SocketManager } from "../systems/MultiplayerClient/SocketManager.js"
 import { Scene, Stage } from "./scene.js"
 
 /**
@@ -13,7 +14,37 @@ import { Scene, Stage } from "./scene.js"
  * 
  */
 export class PhysicsConfig {
-
+    gravity: Vector3
+    is3d: boolean
+    isInfinite: boolean
+    worldBorder: {
+        xMin: number,
+        xMax: number,
+        yMin: number,
+        yMax: number,
+        zMin: number,
+        zMax: number
+    }
+    constructor(
+        gravity: Vector3 = {x: 0, y: 0, z: 0}, 
+        is3d: boolean = true,
+        isInfinite: boolean = true,
+        worldBorder = {
+            xMin: -256,
+            xMax: 256,
+            yMin: -256,
+            yMax: 256,
+            zMin: -256,
+            zMax: 256
+        },
+        
+    )
+    {
+        this.gravity = gravity
+        this.is3d = is3d
+        this.worldBorder = worldBorder
+        this.isInfinite = isInfinite
+    }
 }
 export class GraphicsConfig {
     parent: string
@@ -43,7 +74,7 @@ export interface EngineConfig {
     engineType: EngineType
     graphicsConfig?: GraphicsConfig
     physicsConfig?: PhysicsConfig
-    sceneConfig?: Stage[]
+    sceneConfig: Scene[]
     eventConfig?: EventConfig
     collisionConfig?: CollisionConfig
     scriptingConfig?: ScriptingConfig
@@ -92,5 +123,5 @@ export class SocketServerConfig {
 
 export interface SocketClientConfig {
     socketEventMap: (socket: SocketClient) => void
-    entityFactoryMap: Map<string, () => Entity>
+
 }

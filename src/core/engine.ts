@@ -11,6 +11,7 @@ import { SceneManager } from "./managers/SceneManager.js";
 import { CollisionSystem } from "../systems/Collision/CollisionSystem.js";
 import { EngineType } from "../constants/engineType.js";
 import { Server } from "socket.io";
+import { Stage } from "./scene.js";
 
 export class Engine {
     engineConfig: EngineConfig;
@@ -24,8 +25,10 @@ export class Engine {
     serverTime = 0n;
     clientTime = 0
     contextInfo?: ContextInfo
+    newMap: Map<string, Component> = new Map()
     constructor(gameConfig: EngineConfig = {
         engineType: EngineType.CLIENTONLY,
+        sceneConfig: [new Stage("default")]
 
     }, systems?: System<Component>[]) {
         this.engineConfig = gameConfig
@@ -42,12 +45,7 @@ export class Engine {
         if (this.engineConfig.scriptingConfig) {
             this.systems.push( new ScriptingEngine(this.engineConfig.engineType))
         }
-        
-        if (systems) {
-            for (let sys of systems) {
-                this.systems.push(sys)
-            }
-        }
+
         if (this.engineConfig.collisionConfig) {
             this.systems.push(new CollisionSystem(this.engineConfig.collisionConfig))
         }
@@ -62,7 +60,7 @@ export class Engine {
                 this.systems.push(sys)
             }
         }
-        this.sceneManager = new SceneManager(this.engineConfig,this.engineConfig.sceneConfig, this.systems)
+        this.sceneManager = new SceneManager(this.engineConfig,this.systems)
         this.running = true
         
 
@@ -143,7 +141,7 @@ export class Engine {
         }
     }
     */
-   
+
     start(dt: number): void {
         this.running = true
         console.log("Startng Engin ")
@@ -151,22 +149,14 @@ export class Engine {
         
         for (let sys of this.systems) {
 
+            this.sceneManager.systems.set(sys.tag, sys)
 
-            let comp = this.sceneManager.getCurrentScene().engineComponents.set(sys.tag, sys.components)
-            curr.engineComponents.set(sys.tag, sys.components)
-            this.sceneManager.systemTag.set(sys.tag, sys)
-            if (comp) {
-                
- 
-            } else { 
-                throw Error("error in start method")
-            }
             
         }
             let config = curr.getSceneConfig()
             let entities = config.entities.length   
             for (let i = 0; i < entities; i++) {
-                curr.addEntity(curr, config.entities[i])
+                curr.addEntity(config.entities[i])
             }
 
         if (this.engineConfig.engineType == EngineType.CLIENTONLY || this.engineConfig.engineType == EngineType.SOCKETCLIENT) {

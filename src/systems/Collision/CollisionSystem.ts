@@ -8,6 +8,7 @@ export class CollisionSystem implements System<Collideable> {
     components: Map<number, Collideable>;
     config: CollisionConfig
     deleted: Collideable[]
+    sceneManager!: SceneManager;
     collisionStrategy: CollisionStrategy 
     bounds?: {topX: number, topY: number, bottomX: number, bottomY: number, wallCollide: (colider:Collideable)=>void}
     constructor(config: CollisionConfig) {
@@ -22,7 +23,7 @@ export class CollisionSystem implements System<Collideable> {
     }
     register(comp: Collideable,id: number): void {
         if (comp.componentId == undefined || comp.componentId == null) {
-            
+
             comp.componentId = id
             comp.system = this
             this.components.set(id, comp)
@@ -45,8 +46,8 @@ export class CollisionSystem implements System<Collideable> {
     }
     
     update(dt: number): void {
-        console.log("Collision System Running")
-        console.log("Collision Components: " + this.components.size)
+        //console.log("Collision System Running")
+        //console.log("Collision Components: " + this.components.size)
         this.collisionStrategy.update(dt)
         
         while (this.deleted.length > 0) {

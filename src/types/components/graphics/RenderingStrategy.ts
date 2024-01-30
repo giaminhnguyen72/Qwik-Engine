@@ -20,7 +20,7 @@ export class PainterStrategy implements RenderStrategy {
         
         for ( let i of this.graphicsEngine.components.values()) {
             if (i.rendered == false) {
-                this.queue.enqueue(i, i.transform.z)
+                this.queue.enqueue(i, i.pos.z)
             }
             
         }
@@ -42,7 +42,7 @@ export class PainterStrategy implements RenderStrategy {
             } else {
                 let camera = renderingArr[i]
 
-                console.log("Size is " + this.queue.size)
+                //console.log("Size is " + this.queue.size)
 
                 camera.render(list)
             }
@@ -64,7 +64,7 @@ export class PainterStrategy implements RenderStrategy {
 
         this.queue.clear()
         
-        console.log("Cleared queue length is " + this.queue.size)
+        //console.log("Cleared queue length is " + this.queue.size)
     }
     
 

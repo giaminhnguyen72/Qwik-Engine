@@ -1,30 +1,30 @@
 
-import { Component, Renderable,  } from "../../types/components.js";
-import { Entity } from "../../types/Entity.js";
-import { Scene } from "../../core/scene.js";
-import { Transform } from "../Physics/transform.js";
-import { System } from "../../types/system.js";
-import { ContextInfo } from "../../core/context.js";
-import { getTopX, getTopY, Rectangle } from "../../types/components/collision/shape.js";
-import { Position } from "../../types/components/physics/transformType.js";
+import { Component, Renderable,  } from "../../../types/components.js";
+import { Entity } from "../../../types/Entity.js";
+import { Scene } from "../../../core/scene.js";
+import { Transform } from "../../physics/components/transform";
+import { System } from "../../../types/system.js";
+import { ContextInfo } from "../../../core/context.js";
+import { getTopX, getTopY, Rectangle } from "../../../types/components/collision/shape.js";
+import { Position } from "../../../types/components/physics/transformType";
 
 export class Sprite implements Component, Renderable {
-    entity: number;
+    entity!: number;
     componentId?: number;
     engineTag: string = "GRAPHICS"
     shape: Rectangle
-    transform: Position;
+    pos: Position;
     context!: ContextInfo
     image!: HTMLImageElement
     src: string
-    constructor(entity: number, shape: Rectangle, src:string) {
-        this.entity = entity
+    constructor(shape: Rectangle = {pos:{x:0, y:0, z:0}, dim: {height: 0, length: 0}, rot: 0}, src:string = "") {
+        
         
 
 
         this.src = src
         this.shape = shape
-        this.transform = this.shape.pos
+        this.pos = this.shape.pos
         
 
     }
@@ -39,14 +39,14 @@ export class Sprite implements Component, Renderable {
 
         this.shape.dim.height = element.shape.dim.height
         this.shape.dim.length = element.shape.dim.length
-        if (element.shape.pos.x != element.transform.x) {
+        if (element.shape.pos.x != element.pos.x) {
             
             throw new Error()
         }
-        if (element.shape.pos.y != element.transform.y) {
+        if (element.shape.pos.y != element.pos.y) {
             throw new Error()
         }
-        if (element.shape.pos.z != element.transform.z) {
+        if (element.shape.pos.z != element.pos.z) {
             throw new Error()
         }
         this.shape.pos.x = element.shape.pos.x
@@ -54,14 +54,18 @@ export class Sprite implements Component, Renderable {
         this.shape.pos.z = element.shape.pos.z
         this.shape.rot = element.shape.rot
         this.visible =  element.visible
-        this.transform.x = element.transform.x
-        this.transform.y = element.transform.y
-        this.transform.z = element.transform.z
+        this.pos.x = element.pos.x
+        this.pos.y = element.pos.y
+        this.pos.z = element.pos.z
 
 
     }
-    visit(element: Sprite) {
-
+    bindPos(element: {pos: Position}) {
+        this.shape.pos = element.pos
+    }
+    bind(element: {shape: Rectangle}) {
+        this.shape = element.shape
+        this.pos = element.shape.pos
     }
 
 
@@ -77,6 +81,7 @@ export class Sprite implements Component, Renderable {
             let y = getTopY(this.shape)
             this.context.ctx.drawImage(this.image, x, y, this.shape.dim.length, this.shape.dim.height)
         }
+
         
     }
 
@@ -97,7 +102,7 @@ export class Sprite implements Component, Renderable {
             entity: this.entity,
             componentId: this.componentId,
             engineTag: this.engineTag,
-            transform: this.transform,
+            pos: this.pos,
             visible: this.visible,
             alive: this.alive,
             src: this.src,

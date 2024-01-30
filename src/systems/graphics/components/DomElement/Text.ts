@@ -1,10 +1,10 @@
-import { GraphicsEngine } from "../../../../../engine/src/systems/graphics/GraphicEngine.js";
-import { GRAPHICS_TAG } from "../../../../../engine/src/constants/componentType.js";
-import { ContextInfo } from "../../../../../engine/src/core/context.js";
-import { Position } from "../../../../../engine/src/types/components/physics/transformType.js";
-import { System } from "../../../../../engine/src/types/system.js";
-import { Component, DomElement, Renderable } from "../../../types/components.js";
-import { Rectangle } from "../../../../../engine/src/types/components/collision/shape.js";
+import { GraphicsEngine } from "../../GraphicEngine.js";
+import { GRAPHICS_TAG } from "../../../../constants/componentType.js";
+import { ContextInfo } from "../../../../core/context.js";
+import { Position } from "../../../../types/components/physics/transformType.js";
+import { System } from "../../../../types/system.js";
+import { Component, DomElement, Renderable } from "../../../../types/components.js";
+import { Rectangle } from "../../../../types/components/collision/shape.js";
 export class Label implements DomElement {
     style: string;
     element!: HTMLElement;
@@ -13,7 +13,7 @@ export class Label implements DomElement {
     id:string
     context!: ContextInfo;
     rendered: boolean = true;
-    transform: Position ={x:0, y:0, z:0};
+    pos: Position ={x:0, y:0, z:0};
     text: string
     render(strategyArr: Iterable<any>): void {
         
@@ -52,7 +52,7 @@ export class Label implements DomElement {
     }
     getRectangle() {
         return {
-            pos: this.transform,
+            pos: this.pos,
             dim: {height: parseInt(this.element.style.height), length: parseInt(this.element.style.width)},
             rot: 0
         }

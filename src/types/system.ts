@@ -5,14 +5,16 @@ import { Component, Emitter, EngineEvent, Listenable, Listener } from "./compone
 export interface System<T extends Component> {
     tag: string
     components: Map<number, T>
+    sceneManager: SceneManager
     update(dt: number):void
     register(comp: T, id: number): void
     unregister(comp:number): void
 
+
 }
-export interface EventSystem extends System<Listenable> {
+export interface EventSystem<T extends EngineEvent> extends System<Listenable> {
 
     registerListener(component: Listenable): void
-    registerEmitter(component: Emitter<EngineEvent>): void
+    registerEmitter(component: Emitter<T>): void
     getConfig(): {}
 }

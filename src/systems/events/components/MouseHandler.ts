@@ -1,10 +1,10 @@
-import { EngineType } from "../../constants/engineType.js";
-import { Engine } from "../../core/engine.js";
-import { EventHandler } from "../../systems/events/EventHandler.js";
-import { Component, Emitter, EngineEvent, Listenable, Listener } from "../../types/components.js";
-import { Position } from "../../types/components/physics/transformType.js";
-import { Entity } from "../../types/Entity.js";
-import { EventSystem, System } from "../../types/system.js";
+import { EngineType } from "../../../constants/engineType.js";
+import { Engine } from "../../../core/engine.js";
+import { EventHandler } from "../EventHandler.js";
+import { Component, Emitter, EngineEvent, Listenable, Listener } from "../../../types/components.js";
+import { Position } from "../../../types/components/physics/transformType.js";
+import { Entity } from "../../../types/Entity.js";
+import { EventSystem, System } from "../../../types/system.js";
 
 
 export class MouseListener implements Listener<ClickEvent> {
@@ -43,7 +43,7 @@ export class MouseListener implements Listener<ClickEvent> {
         this.visible = listener.visible
         this.alive = listener.alive
     }
-    initialize(system: EventSystem): void {
+    initialize(system: EventSystem<ClickEvent>): void {
         system.registerListener(this)
         
     }
@@ -67,7 +67,7 @@ export class MouseListener implements Listener<ClickEvent> {
     
 }
 export class MouseEmitter implements Emitter<ClickEvent> {
-    listeners: Set<Listener<ClickEvent>> = new Set()
+    listeners: Map<number, Listener<ClickEvent>> = new Map()
     events: ClickEvent[] = []
     entity?: number | undefined;
     visible: boolean = true;
@@ -79,7 +79,7 @@ export class MouseEmitter implements Emitter<ClickEvent> {
     constructor(engine: EngineType) {
         this.engineType = engine
     }
-    initialize(system: EventSystem): void {
+    initialize(system: EventSystem<ClickEvent>): void {
         system.registerEmitter(this)
         if (this.engineType != EngineType.SOCKETSERVER) {
             const canvas = document.querySelector('canvas')
@@ -104,12 +104,18 @@ export class MouseEmitter implements Emitter<ClickEvent> {
         }
     }
     addListener(component: Listener<ClickEvent>): void {
-        this.listeners.add(component)
+        this.listeners.set(component.componentId as number, component)
     }
     emit(event: ClickEvent): void {
         for (let listener of this.listeners) {
-            listener.execute(event)
+            listener[1].execute(event)
         }
+    }
+    removeListener(id: number): void {
+        this.listeners.delete(id)
+    }
+    getListeners() {
+        return []
     }
     getEventType(): string {
         return "MOUSE"

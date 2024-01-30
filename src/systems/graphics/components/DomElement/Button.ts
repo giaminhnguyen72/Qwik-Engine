@@ -1,9 +1,9 @@
-import { GraphicsEngine } from "../../../../../engine/src/systems/graphics/GraphicEngine.js";
-import { GRAPHICS_TAG } from "../../../../../engine/src/constants/componentType.js";
-import { ContextInfo } from "../../../../../engine/src/core/context.js";
-import { Position } from "../../../../../engine/src/types/components/physics/transformType.js";
-import { System } from "../../../../../engine/src/types/system.js";
-import { Component, DomElement, Renderable } from "../../../types/components.js";
+import { GraphicsEngine } from "../../GraphicEngine.js";
+import { GRAPHICS_TAG } from "../../../../constants/componentType.js";
+import { ContextInfo } from "../../../../core/context.js";
+import { Position } from "../../../../types/components/physics/transformType.js";
+import { System } from "../../../../types/system.js";
+import { Component, DomElement, Renderable } from "../../../../types/components.js";
 
 
 export class Button implements DomElement {
@@ -15,7 +15,7 @@ export class Button implements DomElement {
     text: string
     context!: ContextInfo;
     rendered: boolean = true;
-    transform: Position = {x:0, y:0, z:0};
+    pos: Position = {x:0, y:0, z:0};
     id: string
     entity?: number | undefined;
     visible: boolean = true;
@@ -26,7 +26,7 @@ export class Button implements DomElement {
     onClick: ()=> void
     getRectangle() {
         return {
-            pos: this.transform,
+            pos: this.pos,
             dim: {height: parseInt(this.element.style.height), length: parseInt(this.element.style.width)},
             rot: 0
         }
@@ -71,7 +71,7 @@ export class ImageButton implements DomElement {
     src: string
     context!: ContextInfo;
     rendered: boolean = true;
-    transform: Position = {x:0, y:0, z:0};
+    pos: Position = {x:0, y:0, z:0};
     childImage!: HTMLImageElement
     entity?: number | undefined;
     visible: boolean = true;
@@ -96,7 +96,7 @@ export class ImageButton implements DomElement {
     }
     getRectangle() {
         return {
-            pos: this.transform,
+            pos: this.pos,
             dim: {height: parseInt(this.element.style.height), length: parseInt(this.element.style.width)},
             rot: 0
         }

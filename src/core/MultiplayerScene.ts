@@ -1,70 +1,37 @@
-
-
 import { SceneManager } from "./managers/SceneManager.js"
 import { Component } from "../types/components.js"
 import { SceneConfig } from "./config.js"
 import { Entity} from "../types/Entity.js"
 import { System } from "../types/system.js"
+
 import { EngineType } from "../constants/engineType.js"
-
+import { Scene } from "./scene"
 import { SocketServer } from "../systems/MultiplayerServer/components/SocketServerHandler.js"
-import { TimedSpriteSheet } from "../systems/graphics/components/Spritesheet.js"
 
-export interface Scene {
-    name: string
-    newEntityQueue?: Map<number, Entity>
-    sceneManager: SceneManager
-    background?: string
-    time: number
-    entities: Map<number, Entity>
-
-    addEntity: (entity: Entity) => Entity
-    getSceneConfig() : SceneConfig
-    getUniqueId(): number
-    getUniqueComponentId(): number,
-    removeEntity(id: number): void
-}
-export class Stage implements Scene, Entity {
-    components: Component[] = []
-    scene?: Scene = this
+export class MultiplayerStage implements Scene, Entity {
+    client: SocketServer = new SocketServer({}, EngineType.SOCKETSERVER)
+    components: Component[] = [this.client]
+    scene: Scene = this
     className: string = "STAGE"
     name: string 
     time: number = 0
     entities: Map<number, Entity> = new Map()
+    classMap: Map<string, Map<number, Entity>>
+    sceneConfig: SceneConfig = {entities: []}
     sceneManager!: SceneManager
-    classMap: Map<string, Map<number, Entity>> = new Map()
     id: number = 0
     componentId = 0
-    constructor(stageName: string, ...components: Component[]) {
+    constructor(stageName: string, ...entities: Entity[]) {
         this.name = stageName
-        for (let i of components) {
-            this.components.push(i)
-        }
-    }
-    
-    getSceneConfig(): SceneConfig {
-        return {
-            entities: [this]
-        }
-    }
-    
-    querySystem<T extends System<Component>> (type: {new(...args: any[]): T}, engineTag: string) {
         
-        let engine = this.sceneManager.queryEngine<T>(engineTag, type)
-        if (engine) {
-            return engine
+        this.classMap = new Map()
+        for (let i of entities) {
+            this.sceneConfig.entities.push(i)
         }
-        return undefined
-
+        this.sceneConfig.entities.push(this)
     }
-    querySys (engineTag: string) {
-        let engine = this.sceneManager.systems.get(engineTag)
-        if (engine) {
-            return engine
-        }
-        return undefined
 
-    }
+
     queryComponent<T extends Component>(type: {new(...args: any[]): T}, entityTag: string) {
         let entityMap = this.classMap.get(entityTag)
         let componentList: T[] = []
@@ -92,15 +59,35 @@ export class Stage implements Scene, Entity {
         } 
         return componentList
     }
+    querySystem<T extends System<Component>> (type: {new(...args: any[]): T}, engineTag: string) {
+        
+        let engine = this.sceneManager.queryEngine<T>(engineTag, type)
+        if (engine) {
+            return engine
+        }
+        return undefined
 
-    addEntity(entity: Entity): Entity {
+    }
+    querySys (engineTag: string) {
+        let engine = this.sceneManager.systems.get(engineTag)
+        if (engine) {
+            return engine
+        }
+        return undefined
+
+    }
+    getSceneConfig(): SceneConfig {
+        return this.sceneConfig
+    }
+  
+    addEntity( entity: Entity): Entity {
+        
         let uniqueId = this.sceneManager.getUniqueId()
+        entity.id = uniqueId
+        entity.scene = this
 
-    entity.id = uniqueId
-    entity.scene = this
-
-    this.entities.set(uniqueId, entity)
-    let entityMap = this.classMap.get(entity.className)
+        this.entities.set(uniqueId, entity)
+        let entityMap = this.classMap.get(entity.className)
         if (entityMap) {
             entityMap.set(entity.id, entity)
         } else {
@@ -108,34 +95,43 @@ export class Stage implements Scene, Entity {
             newMap.set(entity.id, entity)
             this.classMap.set(entity.className, newMap)
         }
-    
-    for (let comp of entity.components) {
-        let compList = this.querySys(comp.engineTag)
-        comp.entity = entity.id
-        if (compList) {
-            let system: System<Component> | undefined= this.sceneManager.systems.get(comp.engineTag)
-            if (system) {
+        
+        for (let comp of entity.components) {
 
-                system.register(comp, this.getUniqueComponentId())
-            } 
+            let compList = this.querySys(comp.engineTag)
+            comp.entity = entity.id
+            if (compList) {
+                let system: System<Component> | undefined= this.sceneManager.systems.get(comp.engineTag)
+                if (system) {
+
+                    system.register(comp, this.getUniqueComponentId())
+                    
+                } 
 
 
-            
-        } else {
-            console.log(comp.engineTag + "does not exist")
-            comp.componentId = this.getUniqueComponentId()
-            
+                
+            } else {
+                console.log(comp.engineTag + "does not exist")
+
+                comp.componentId = this.getUniqueComponentId()
+                
+            }
         }
-    }
-    console.log("successfully added entity")
-    
-    return entity
+        console.log("successfully added entity")
+        
+        return entity
     }
     removeEntity(id: number) {
         let entity : Entity | undefined = this.entities.get(id)
-    
+        console.log(entity?.className)
+        
     if (entity) {
         this.entities.delete(id)
+        let entityMap = this.classMap.get(entity.className)
+        if (entityMap) {
+            entityMap.delete(id)
+
+        } 
         for (let c of entity.components) {
             console.log("Component")
             console.log(c)
@@ -144,23 +140,20 @@ export class Stage implements Scene, Entity {
             console.log("Component id ")
             console.log(c.componentId)
             if (this.querySys(c.engineTag)) {
-                c.system.unregister(c.componentId as number) 
+                c.system.unregister(c.componentId as number)
             }
             
-            
         }
-        
-        
-        
-    }
+        this.client.deleted.push(id)
 
+    }
     return entity
     }
-    addServerEntity( entity: Entity) {
+    addServerEntity(scene:Scene, entity: Entity) {
         if (entity.id == null || entity.id == undefined) {
             throw new Error("Entity id is undefined")
         }
-        let scene: Scene = this
+        
         entity.scene = scene
         scene.entities.set(entity.id as number, entity)
         let entityMap = this.classMap.get(entity.className)
@@ -180,7 +173,11 @@ export class Stage implements Scene, Entity {
             
                         let system: System<Component> | undefined= scene.sceneManager.systems.get(comp.engineTag)
                         if (system) {
-                            system.register(comp, this.getUniqueComponentId())
+                            if (!comp.componentId) {
+                                throw Error()
+                            }
+                            system.register(comp, comp.componentId as number)
+                            comp.system = system
                         } 
             
                         
@@ -201,7 +198,12 @@ export class Stage implements Scene, Entity {
         
                     let system: System<Component> | undefined= scene.sceneManager.systems.get(comp.engineTag)
                     if (system) {
-                        system.register(comp, this.getUniqueComponentId())
+                        if (!comp.componentId) {
+                            throw Error()
+                        }
+                        system.register(comp, comp.componentId as number)
+
+                        comp.system = system
                     } 
         
                     
@@ -240,4 +242,3 @@ export class Stage implements Scene, Entity {
         
     }
 }
-// For client Class

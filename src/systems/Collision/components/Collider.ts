@@ -1,11 +1,11 @@
 'use strict'
-import { CollisionSystem } from "../../systems/Collision/CollisionSystem.js";
-import { Collideable, Component } from "../../types/components.js";
-import { Shape, Rectangle } from "../../types/components/collision/shape.js";
-import { Position } from "../../types/components/physics/transformType.js";
-import { Entity } from "../../types/Entity.js";
+import { CollisionSystem } from "../CollisionSystem.js";
+import { Collideable, Component } from "../../../types/components.js";
+import { Shape, Rectangle } from "../../../types/components/collision/shape.js";
+import { Position } from "../../../types/components/physics/transformType.js";
+import { Entity } from "../../../types/Entity.js";
 
-import { Transform } from "../Physics/transform.js";
+import { Transform } from "../../physics/components/transform.js";
 
 
 export class BoxCollider implements Collideable {
@@ -63,7 +63,9 @@ export class BoxCollider implements Collideable {
     visible: boolean = true;
     alive: boolean = true;
 
-    
+    bind(element: {shape: Rectangle}, posOffset: {x: number, y: number, z: 0}, dimOffset: {x:number }) {
+        this.shape = element.shape
+    }
     checkCollision(collider: Collideable): boolean {
 
         let doesCollide = false

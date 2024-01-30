@@ -1,15 +1,15 @@
-import { ContextInfo } from "./../../../../../engine/src/core/context.js";
-import { Position } from "./../../../../../engine/src/types/components/physics/transformType.js";
-import { System } from "../../../../../engine/src/types/system.js";
-import { Component, DomElement, Renderable } from "../../../types/components.js";
-import { GRAPHICS_TAG } from "../../../../../engine/src/constants/componentType.js";
-import { GraphicsEngine } from "../../../../../engine/src/systems/graphics/GraphicEngine.js";
-import { Stage } from "../../../../../engine/src/core/scene.js";
+import { ContextInfo } from "../../../../core/context.js";
+import { Position } from "../../../../types/components/physics/transformType.js";
+import { System } from "../../../../types/system.js";
+import { Component, DomElement, Renderable } from "../../../../types/components.js";
+import { GRAPHICS_TAG } from "../../../../constants/componentType.js";
+import { GraphicsEngine } from "../../GraphicEngine.js";
+import { Stage } from "../../../../core/scene.js";
 
 export class Div implements DomElement {
     context!: ContextInfo;
     rendered: boolean = true;
-    transform: Position = {x: 0, y: 0, z:0};
+    pos: Position = {x: 0, y: 0, z:0};
     entity!: number;
     element!: HTMLDivElement
     visible: boolean = false;
@@ -31,7 +31,7 @@ export class Div implements DomElement {
     }
     getRectangle() {
         return {
-            pos: this.transform,
+            pos: this.pos,
             rot: 0,
 
             dim: {

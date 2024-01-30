@@ -1,21 +1,24 @@
 import { io, Socket } from "socket.io-client";
-import { EventHandler } from "../../systems/events/EventHandler.js";
+import { EventHandler } from "../events/EventHandler.js";
 import { Component, Emitter, EngineEvent, Listenable, Listener, Renderable } from "../../types/components.js";
 import { EventSystem, System } from "../../types/system.js";
-import { EventConfig, SocketClientConfig } from "../config.js";
-import { SceneManager } from "./SceneManager.js";
-
-export class SocketManager implements EventSystem{
+import { EventConfig, SocketClientConfig } from "../../core/config.js";
+import { SceneManager } from "../../core/managers/SceneManager.js";
+interface SocketEvent extends EngineEvent{
+    eventName: string
+    key: string
+}
+export class SocketManager implements EventSystem<SocketEvent>{
     static socket: Socket
 
     sceneManager: SceneManager
-    tag: string = "EVENTHANDLER";
+    tag: string = "SOCKET";
     components: Map<number, Listenable>;
     emitters: Map<string, Emitter<EngineEvent>> = new Map()
-    unregistered: Map<string, Listener<EngineEvent>[]> = new Map()
+
     listeners: Listener<EngineEvent>[] = []
     config: SocketClientConfig
-    deleted: Component[] = []
+    deleted: Listenable[] = []
     static getInstance(): Socket {
         if (SocketManager.socket == undefined || SocketManager.socket == null) {
             this.socket = io()
@@ -30,11 +33,11 @@ export class SocketManager implements EventSystem{
         
 
         window.addEventListener("click", (event) => {
-            SocketManager.socket.emit("click")
+            SocketManager.getInstance().emit("click")
             
         })
         window.addEventListener("keydown", (event) => {
-            SocketManager.socket.emit("keydown", event.key)
+            SocketManager.getInstance().emit("keydown", event.key)
             
         })
         
@@ -57,6 +60,7 @@ export class SocketManager implements EventSystem{
     }
     register(comp: Listenable): void {
         if (comp.componentId == undefined || comp.componentId == null) {
+
             let id = this.sceneManager.getUniqueComponentId()
             comp.componentId = id
             comp.system = this
@@ -82,8 +86,8 @@ export class SocketManager implements EventSystem{
     
    
     update(dt: number): void {
-        console.log("Client Socket Handler")
-        console.log("Client Socket Handler Components:"+this.components.size)
+        //console.log("Client Socket Handler")
+        //console.log("Client Socket Handler Components:"+this.components.size)
 
         for (let emitter of this.emitters) {
             emitter[1].update(dt)
@@ -94,6 +98,24 @@ export class SocketManager implements EventSystem{
                 emitter.addListener(this.listeners[i])
                 this.listeners[i] = this.listeners[this.listeners.length - 1]
                 this.listeners.pop() 
+            }
+        }
+        while (this.deleted.length > 0) {
+            let comp = this.deleted.pop()
+            
+            this.components.delete(comp?.componentId as number)
+            if (comp) {
+                let emitterComponent = this.emitters.get(comp.getEventType())
+                if (emitterComponent && emitterComponent.componentId == comp.componentId) {
+                    this.emitters.delete(comp.getEventType())
+                    let components = emitterComponent.getListeners()
+                    for (let i of components) {
+                        this.listeners.push(i)
+                    }
+                } else if (emitterComponent) {
+                    emitterComponent.removeListener(comp.componentId as number)
+                } 
+                
             }
         }
 

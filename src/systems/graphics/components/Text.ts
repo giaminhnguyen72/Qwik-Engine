@@ -1,9 +1,9 @@
-import { ContextInfo } from "../../core/context.js";
-import { Component, Renderable } from "../../types/components.js";
-import { Position } from "../../types/components/physics/transformType.js";
-import { Entity } from "../../types/Entity.js";
-import { System } from "../../types/system.js";
-import { Transform } from "../Physics/transform.js";
+import { ContextInfo } from "../../../core/context.js";
+import { Component, Renderable } from "../../../types/components.js";
+import { Vector3 } from "../../../types/components/physics/transformType.js";
+import { Entity } from "../../../types/Entity.js";
+import { System } from "../../../types/system.js";
+import { Transform } from "../../physics/components/transform";
 
 export class Text implements Renderable {
     entity!: number;
@@ -13,13 +13,13 @@ export class Text implements Renderable {
     visible: boolean = true;
     alive: boolean = true;
     system!: System<Component>;
-    transform: Position
+    pos: Vector3
     update(dt: number, ctx?: CanvasRenderingContext2D | undefined): void {
 
     }
     
-    constructor(text: string) {
-        this.transform = {x:100, y:100, z:0}
+    constructor(text: string = "") {
+        this.pos = {x:100, y:100, z:0}
         this.text = text
     }
     unmount(): void {
@@ -31,14 +31,14 @@ export class Text implements Renderable {
         this.componentId = text.componentId
         this.entity = text.entity
         this.text = text.text
-        this.transform.x = this.transform.x
-        this.transform.y = this.transform.y
+        this.pos.x = this.pos.x
+        this.pos.y = this.pos.y
 
     }
     context!: ContextInfo;
     render(): void {
         if (this.context) {
-            this.context.ctx.fillText(this.text, this.transform.x, this.transform.y)
+            this.context.ctx.fillText(this.text, this.pos.x, this.pos.y)
         }
     }
     initialize() {
@@ -47,7 +47,7 @@ export class Text implements Renderable {
     }
     getRectangle() {
         return {
-            pos: this.transform,
+            pos: this.pos,
             dim: {length: 0, height: 0},
             rot: 0
         }
@@ -60,7 +60,7 @@ export class Text implements Renderable {
             text: this.text,
             visible: this.visible,
             alive: this.alive,
-            transform: this.transform
+            pos: this.pos
         }
     }
     

@@ -1,15 +1,15 @@
-import { ContextInfo } from "../../core/context.js";
-import { Component, Renderable } from "../../types/components.js";
-import { Position } from "../../types/components/physics/transformType.js";
-import { Entity } from "../../types/Entity.js";
-import { System } from "../../types/system.js";
-import { Transform } from "../Physics/transform.js";
-import { Rectangle as RectangleCollider } from "../../types/components/collision/shape.js";
+import { ContextInfo } from "../../../core/context.js";
+import { Component, Renderable } from "../../../types/components.js";
+import { Position } from "../../../types/components/physics/transformType.js";
+import { Entity } from "../../../types/Entity.js";
+import { System } from "../../../types/system.js";
+import { Transform } from "../../physics/components/transform";
+import { Rectangle as RectangleCollider } from "../../../types/components/collision/shape.js";
 export class Rectangle implements Component, Renderable{
     entity!: number
     engineTag: string = "GRAPHICS";
     componentId?: number | undefined;
-    transform: Position
+    pos: Position
     shape: RectangleCollider
     color: string
     borderOutline: number = 0
@@ -19,9 +19,12 @@ export class Rectangle implements Component, Renderable{
     constructor(rectangle: RectangleCollider, color: string = "#000000" , outline: number = 0) {
 
         this.shape= rectangle
-        this.transform = rectangle.pos
+        this.pos = rectangle.pos
         this.color = color
         this.borderOutline = outline
+    }
+    bind(element: {shape: RectangleCollider}) {
+        this.shape = element.shape
     }
     unmount(): void {
         throw new Error("Method not implemented.");
@@ -31,9 +34,9 @@ export class Rectangle implements Component, Renderable{
     copy(rectangle: Rectangle): void {
         this.entity = rectangle.entity
         this.componentId = rectangle.componentId
-        this.transform.x = rectangle.transform.x
-        this.transform.y = rectangle.transform.y
-        this.transform.z = rectangle.transform.z
+        this.pos.x = rectangle.pos.x
+        this.pos.y = rectangle.pos.y
+        this.pos.z = rectangle.pos.z
         this.color = rectangle.color
         this.visible = rectangle.visible
         this.alive = rectangle.alive

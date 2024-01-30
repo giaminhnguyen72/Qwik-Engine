@@ -1,5 +1,5 @@
 import { Circle, Rectangle } from "../../../types/components/collision/shape.js"
-import { BoxCollider, CircleCollider } from "../Collider.js";
+import { BoxCollider, CircleCollider } from "../components/Collider.js";
 
 export function RectangleRectangleCollisionHandler(boxCollider:BoxCollider, rectangle: Rectangle) {
     var ret: boolean = false

@@ -14,6 +14,7 @@ export class SocketEngine implements System<Listenable> {
         keyboard: false,
         mouse: false
     }) {
+
         this.components = new Map<number, Listenable>()
         this.events = []
         this.eventConfig = eventConfig
@@ -28,6 +29,7 @@ export class SocketEngine implements System<Listenable> {
 
 
     }
+    sceneManager!: SceneManager;
     register(comp: Listenable, id: number): void {
         if (comp.componentId == undefined || comp.componentId == null) {
 

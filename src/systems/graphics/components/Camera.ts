@@ -1,15 +1,16 @@
-import { ContextInfo } from "../../core/context.js";
-import { Component, Renderable } from "../../types/components.js";
-import { Rectangle } from "../../types/components/collision/shape.js";
-import { Position } from "../../types/components/physics/transformType.js";
-import { Entity } from "../../types/Entity.js";
-import { System } from "../../types/system.js";
-import { Transform } from "../Physics/transform.js";
+import { ContextInfo } from "../../../core/context.js";
+import { GraphicsEngine } from "../GraphicEngine.js";
+import { Component, Renderable } from "../../../types/components.js";
+import { Rectangle } from "../../../types/components/collision/shape.js";
+import { Position } from "../../../types/components/physics/transformType.js";
+import { Entity } from "../../../types/Entity.js";
+import { System } from "../../../types/system.js";
+import { Transform } from "../../physics/components/transform.js";
 
 export class Camera implements Renderable {
     context!: ContextInfo;
     
-    system!: System<Renderable>;
+    system!: GraphicsEngine;
     entity!: number;
     visible: boolean = true;
     alive: boolean = true;
@@ -22,12 +23,12 @@ export class Camera implements Renderable {
     height: number
     width:number
 
-    constructor(entity: number = -1, width: number=-1, height: number = -1, curr: Position={x:0,y:0,z:-1} , scale: {x: number, y: number} = {x: 1, y: 1}) {
+    constructor(width: number=-1, height: number = -1, curr: Position={x:0,y:0,z:-1} , scale: {x: number, y: number} = {x: 1, y: 1}) {
         this.height = height
         this.width = width
         this.pos= curr
         this.transform = {x: 0, y: 0,z: 0}
-        this.entity = entity
+        
         this.scale = scale
     }
     unmount(): void {
@@ -83,21 +84,27 @@ export class Camera implements Renderable {
     }
 
     render(array: Renderable[]): void {
-        this.context.ctx.translate(this.transform.x, this.transform.y)
-        this.context.ctx.clearRect(-1 * this.pos.x,-1 * this.pos.y,this.width, this.height)
-        let items = array
-        for (let i of items) {
-            if (i != this) {
-                
-                i.render(array)
+        if (this.visible) {
+            this.context.ctx.clearRect(-1 * this.pos.x,-1 * this.pos.y,this.width, this.height)
+            if (this.scale.x != 0 && this.scale.y != 0) {
+                this.context.ctx.scale(this.scale.x, this.scale.y)
+            }
+            
 
+            this.context.ctx.translate(this.transform.x, this.transform.y)
+            let items = array
+            for (let i of items) {
+                if (i != this) {
+                    i.render(array)
             }
             
         }
-        console.log("Camera is rendered " + items.length + "elements")
+        //console.log("Camera is rendered " + items.length + "elements")
         this.transform.x = 0
         this.transform.y = 0
         this.context.ctx.save()
+        }
+        
     }
     toJSON() {
         return {
@@ -106,7 +113,7 @@ export class Camera implements Renderable {
             componentId: this.componentId,
             width: this.width,
             height: this.height,
-            visible: this.visible,
+            visible: false,
             alive: this.alive,
             scale: this.scale,
             rendered: this.rendered,
