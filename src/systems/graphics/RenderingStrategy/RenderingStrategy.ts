@@ -1,11 +1,12 @@
-import { GraphicsEngine } from "../../../../../engine/src/systems/graphics/GraphicEngine.js";
-import { PriorityQueue } from "../../../../../engine/src/structs/PriorityQueue.js";
-import { Component, Renderable } from "../../components.js";
+import { GraphicsEngine } from "../GraphicEngine.js";
+import { PriorityQueue } from "../../../structs/PriorityQueue.js";
+import { Component, Renderable } from "../../../types/components.js";
+import { Camera } from "../components/2d/Camera.js";
 
 export interface RenderStrategy {
     registerStrategy(component:Renderable): void
     deregisterStrategy(component: Renderable): void
-    render(renderingArr: Renderable[]): void
+    render(renderingArr: Camera[]): void
     clear(): void
 
 }
@@ -17,7 +18,10 @@ export class PainterStrategy implements RenderStrategy {
     }
     render(renderingArr: Renderable[]): void {
         let list = []
-        
+            this.graphicsEngine.contextInfo.ctx.save()
+            this.graphicsEngine.contextInfo.ctx.setTransform(1,0,0,1,0,0)
+            this.graphicsEngine.contextInfo.ctx.clearRect(0,0, this.graphicsEngine.contextInfo.ctx.canvas.width, this.graphicsEngine.contextInfo.ctx.canvas.height)
+            this.graphicsEngine.contextInfo.ctx.restore()
         for ( let i of this.graphicsEngine.components.values()) {
             if (i.rendered == false) {
                 this.queue.enqueue(i, i.pos.z)
@@ -44,7 +48,7 @@ export class PainterStrategy implements RenderStrategy {
 
                 //console.log("Size is " + this.queue.size)
 
-                camera.render(list)
+                //camera.render(camera.pos )
             }
             
             

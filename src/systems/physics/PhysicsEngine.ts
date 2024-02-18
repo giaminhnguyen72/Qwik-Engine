@@ -12,7 +12,8 @@ export class PhysicsEngine implements System<Transformable>{
     config: PhysicsConfig
     deleted: Component[] = []
     sceneManager!: SceneManager;
-    constructor(config: PhysicsConfig) {
+    constructor(sceneManager: SceneManager, config: PhysicsConfig) {
+        this.sceneManager = sceneManager
         this.components = new Map<number, Transformable>()
         this.config = config
     }
@@ -26,6 +27,7 @@ export class PhysicsEngine implements System<Transformable>{
             comp.system = this
             this.components.set(comp.componentId, comp)
         }
+        
     }
     query<T extends Transformable>(type: {new(...args: any[]) : T}) {
         let arr: T[] = []
@@ -53,24 +55,26 @@ export class PhysicsEngine implements System<Transformable>{
     update(dt: number): void {
         //console.log("Physics engine running")
         //console.log("Physics Components: " + this.components.size)
+        let scene = this.sceneManager.getCurrentScene()
+        let worldBounds = scene.worldBounds
         for (let comp of this.components) {
 
 
             comp[1].update(dt)
-            if (!this.config.isInfinite && comp[1].pos.x < this.config.worldBorder.xMin) {
-                comp[1].pos.x = this.config.worldBorder.xMin
-            } else if (!this.config.isInfinite && comp[1].pos.x > this.config.worldBorder.xMax) {
-                comp[1].pos.x = this.config.worldBorder.xMax
+            if (worldBounds.xMin != 0  && comp[1].pos.x < worldBounds.xMin) {
+                comp[1].pos.x = worldBounds.xMin
+            } else if (worldBounds.xMax != 0 && comp[1].pos.x > worldBounds.xMax) {
+                comp[1].pos.x = worldBounds.xMax
             }
-            if (!this.config.isInfinite && comp[1].pos.y < this.config.worldBorder.yMin) {
-                comp[1].pos.y = this.config.worldBorder.yMin
-            } else if (!this.config.isInfinite && comp[1].pos.y > this.config.worldBorder.yMax) {
-                comp[1].pos.y = this.config.worldBorder.yMax
+            if (worldBounds.yMin != 0  && comp[1].pos.y < worldBounds.yMin) {
+                comp[1].pos.y = worldBounds.yMin
+            } else if (worldBounds.yMax != 0 && comp[1].pos.y > worldBounds.yMax) {
+                comp[1].pos.y = worldBounds.yMax
             }
-            if (!this.config.isInfinite && comp[1].pos.z < this.config.worldBorder.zMin) {
-                comp[1].pos.z = this.config.worldBorder.zMin
-            } else if (!this.config.isInfinite && comp[1].pos.z > this.config.worldBorder.zMax) {
-                comp[1].pos.z = this.config.worldBorder.zMax   
+            if (worldBounds.zMin != 0  && comp[1].pos.z < worldBounds.zMin) {
+                comp[1].pos.z = worldBounds.zMin 
+            } else if (worldBounds.zMax != 0 && comp[1].pos.z > worldBounds.zMax) {
+                comp[1].pos.z = worldBounds.zMax
             }
             
         }

@@ -1,10 +1,21 @@
-import { GRAPHICS_TAG } from "../../../constants/componentType.js";
-import { ContextInfo } from "../../../core/context.js";
-import { GraphicsEngine } from "../GraphicEngine.js";
-import { Component, Renderable } from "../../../types/components.js";
-import { getTopX, getTopY, Rectangle, rectangleCopy } from "../../../types/components/collision/shape.js";
-import { Position } from "../../../types/components/physics/transformType.js";
-import { System } from "../../../types/system.js";
+import { GRAPHICS_TAG } from "../../../../constants/componentType.js";
+
+import { GraphicsEngine } from "../../GraphicEngine.js";
+
+
+
+
+import { Component, Renderable,  } from "../../../../types/components.js";
+import { Entity } from "../../../../types/Entity.js";
+import { Scene } from "../../../../core/scene.js";
+import { Transform } from "../../../physics/components/transform";
+
+import { ContextInfo } from "../../../../core/context.js";
+import { getTopX, getTopY, Rectangle } from "../../../..../../../types/components/collision/shape.js";
+
+import { Camera } from "./Camera.js";
+import { Position } from "../../../../../../engine/src/types/components/physics/transformType.js";
+import { System } from "../../../../../../engine/src/types/system.js";
 
 export class TimedSpriteSheet implements Renderable {
     entity?: number | undefined;
@@ -12,21 +23,35 @@ export class TimedSpriteSheet implements Renderable {
     alive: boolean = true;
     engineTag: string = GRAPHICS_TAG;
     componentId?: number | undefined;
-    system!: System<Component>;
+    system!: GraphicsEngine;
     path: string 
     image!:HTMLImageElement
     delay:number
-    state:number = 0
+    column:number = 0
+    row: number= 0
     time:number = 0
     length: number
-    constructor(path: string, rectangle: Rectangle, delay:number, length: number) {
+    numOfStates: number[] 
+    constructor(path: string, rectangle: Rectangle, delay:number, imageLength: number, numOfStates: number[] = []) {
         
         this.path = path
         this.pos = rectangle.pos
         this.shape = rectangle
         this.delay = delay
-        this.length = length
+        this.length = imageLength
         
+        this.numOfStates = numOfStates
+        
+    }
+    switchImage(path: string) {
+        let image = this.system.images.get(path)
+        if (image) {
+            this.image = image
+        } else {
+            this.image = new Image()
+            this.image.src = path
+            this.system.images.set(path, this.image)
+        }
     }
     unmount(): void {
         throw new Error("Method not implemented.");
@@ -35,13 +60,15 @@ export class TimedSpriteSheet implements Renderable {
     rendered: boolean= false;
     pos: Position;
     shape:Rectangle
-    render(): void {
+    render(cam: Camera): void {
         if (this.context.ctx) {
             let x = getTopX(this.shape)
 
             let y = getTopY(this.shape)
-
-            this.context.ctx.drawImage(this.image, this.shape.dim.length * this.state, 0, this.shape.dim.length, this.shape.dim.height, x, y, this.shape.dim.length, this.shape.dim.height)
+            let screenX = cam.scale.x * (x ) - cam.transform.x 
+            let screemY = cam.scale.y* (y) - cam.transform.y
+            this.context.ctx.drawImage(this.image, this.shape.dim.length * this.column, this.shape.dim.height * this.row, this.shape.dim.length, this.shape.dim.height,
+              screenX, screemY , this.shape.dim.length * cam.scale.x, this.shape.dim.height * cam.scale.y)
         } else {
 
         }
@@ -54,17 +81,24 @@ export class TimedSpriteSheet implements Renderable {
         } else {
             this.image = new Image()
             this.image.src = this.path
+
         }
         
-        this.state = 0
+        this.column = 0
     }
     update(dt: number, ctx?: CanvasRenderingContext2D | undefined): void {
         this.time += dt
 
         if (this.time > this.delay) {
             let stateChange = Math.floor(this.time / this.delay)
-            let numStates = Math.floor(this.image.width / this.shape.dim.length)
-            this.state = (1 + this.state) % numStates
+            
+            let numStates;
+            if (this.row >= 0 && this.row < this.numOfStates.length) {
+                numStates = this.numOfStates[this.row]
+            } else {
+                numStates = 1
+            }
+            this.column = (1 + this.column) % numStates
             this.time = this.time % this.delay
 
         }
@@ -85,16 +119,16 @@ export class TimedSpriteSheet implements Renderable {
         this.alive = component.alive
         this.componentId = component.componentId
 
-        this.path = component.path
         this.delay = component.delay
         
         this.rendered = component.rendered
 
         this.pos.x = component.pos.x
         this.pos.y = component.pos.y
+        
         this.pos.z = component.pos.z
 
-        rectangleCopy(this.shape, component.shape)
+        
 
 
     }
@@ -103,16 +137,13 @@ export class TimedSpriteSheet implements Renderable {
 
                 entity: this.entity,
                 componentId: this.componentId,
-                engineTag: this.engineTag,
-                pos: this.pos,
+                
+                pos: {x: Math.floor(this.pos.x),y: Math.floor(this.pos.y), z: Math.floor(this.pos.z)},
                 visible: this.visible,
                 alive: this.alive,
-                src: this.path,
-                shape:this.shape,
+
                 delay: this.delay,
-                state: this.state,
-                time: this.time,
-                path: this.path,
+                column: this.column,
                 rendered: this.rendered
         }
     }

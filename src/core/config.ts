@@ -111,9 +111,12 @@ export class CollisionConfig {
 export class ScriptingConfig {
     
 }
+
 export class SocketServerConfig {
     server?: Server
     roomId?: string
+    buffer: number = 100
+    delay: number = 100
     socketEventMap?: {[key: string ]: (id: string, event: string[], socket: Socket) => void}
     socketPrev?: (event: string[], socket: Server) => void
     

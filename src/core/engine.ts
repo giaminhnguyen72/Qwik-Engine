@@ -14,7 +14,7 @@ import { Server } from "socket.io";
 import { Stage } from "./scene.js";
 
 export class Engine {
-    engineConfig: EngineConfig;
+    static engineConfig: EngineConfig;
     canvasID: string = "engineCanvas"
     static updateTime = 0
     running:boolean
@@ -24,35 +24,34 @@ export class Engine {
     graphics?: GraphicsEngine
     serverTime = 0n;
     clientTime = 0
-    contextInfo?: ContextInfo
+
     newMap: Map<string, Component> = new Map()
     constructor(gameConfig: EngineConfig = {
         engineType: EngineType.CLIENTONLY,
-        sceneConfig: [new Stage("default")]
+        sceneConfig: [new Stage("default", {xMin: 0, xMax: 0, yMin: 0, yMax: 0, zMin: 0, zMax: 0})]
 
     }, systems?: System<Component>[]) {
-        this.engineConfig = gameConfig
-        if (gameConfig.graphicsConfig) {
-            this.contextInfo = new ContextInfo(gameConfig.graphicsConfig)
-        }
-        if (this.engineConfig.eventConfig && this.contextInfo) {
-            this.systems.push(new EventHandler(this.engineConfig.eventConfig)) 
+        Engine.engineConfig = gameConfig
+        this.sceneManager = new SceneManager(Engine.engineConfig,this.systems)
+
+        if (Engine.engineConfig.eventConfig) {
+            this.systems.push(new EventHandler(this.sceneManager, Engine.engineConfig.eventConfig)) 
         }
         
-        if (this.engineConfig.physicsConfig) {
-            this.systems.push(new PhysicsEngine(this.engineConfig.physicsConfig))
+        if (Engine.engineConfig.physicsConfig) {
+            this.systems.push(new PhysicsEngine(this.sceneManager, Engine.engineConfig.physicsConfig))
         }
-        if (this.engineConfig.scriptingConfig) {
-            this.systems.push( new ScriptingEngine(this.engineConfig.engineType))
+        if (Engine.engineConfig.scriptingConfig) {
+            this.systems.push( new ScriptingEngine(this.sceneManager, Engine.engineConfig.engineType))
         }
 
-        if (this.engineConfig.collisionConfig) {
-            this.systems.push(new CollisionSystem(this.engineConfig.collisionConfig))
-        }
+        if (Engine.engineConfig.collisionConfig) {
+            this.systems.push(new CollisionSystem(this.sceneManager, Engine.engineConfig.collisionConfig))
+        } 
         
-        if (this.engineConfig.graphicsConfig && this.contextInfo) {
+        if (Engine.engineConfig.graphicsConfig) {
 
-            this.graphics = new GraphicsEngine(this.engineConfig.graphicsConfig, this.contextInfo)
+            this.graphics = new GraphicsEngine(this.sceneManager, Engine.engineConfig.graphicsConfig)
             this.systems.push(this.graphics)
         }
         if (systems) {
@@ -60,7 +59,7 @@ export class Engine {
                 this.systems.push(sys)
             }
         }
-        this.sceneManager = new SceneManager(this.engineConfig,this.systems)
+        this.sceneManager.initialize(this.systems)
         this.running = true
         
 
@@ -75,7 +74,7 @@ export class Engine {
         document.body.style.width = "100%"
         document.body.style.margin = "0"
         this.setup()
-        this.div = this.generateDiv(this.engineConfig.parent) ;
+        this.div = this.generateDiv(Engine.engineConfig.parent) ;
         this.running = false
         */
         
@@ -83,7 +82,7 @@ export class Engine {
     /**
     parseStyle(styleObject: Object):  string {
         let cssArray: string[] = Object.entries(styleObject).map(([k,v]) => k + ":" + v + ";")
-        console.log(this.engineConfig.parent)
+        console.log(Engine.engineConfig.parent)
         return cssArray.join(" ")
     }
     */
@@ -105,9 +104,9 @@ export class Engine {
     generateCanvas(): HTMLElement {
         let canvas = document.createElement("CANVAS")
         canvas.id = this.canvasID
-        console.log(this.parseStyle(this.engineConfig.style))
+        console.log(this.parseStyle(Engine.engineConfig.style))
         console.log("Before")
-        canvas.setAttribute('style', this.parseStyle(this.engineConfig.style))
+        canvas.setAttribute('style', this.parseStyle(Engine.engineConfig.style))
         return canvas
     }
     getCtx() {
@@ -127,7 +126,7 @@ export class Engine {
      * 
      
     setup() {
-        let config = this.engineConfig
+        let config = Engine.engineConfig
         if (true) {
             let image = new Image()
             image.src = "/images/test.jpg"
@@ -159,7 +158,7 @@ export class Engine {
                 curr.addEntity(config.entities[i])
             }
 
-        if (this.engineConfig.engineType == EngineType.CLIENTONLY || this.engineConfig.engineType == EngineType.SOCKETCLIENT) {
+        if (Engine.engineConfig.engineType == EngineType.CLIENTONLY || Engine.engineConfig.engineType == EngineType.SOCKETCLIENT) {
 
             
             
@@ -190,13 +189,13 @@ export class Engine {
     }
     update(dt: number) {
             if (dt > 0 ) {
-                
+                this.sceneManager.currScene.update(dt)
                 for (let sys of this.systems) {
                     sys.update(dt)
                 }
       
                 
-                console.log(dt)
+                //console.log(dt)
 
                 window.requestAnimationFrame((timestamp:number) => {
                 
@@ -223,9 +222,9 @@ export class Engine {
     }
     serverUpdate(dt: number, timeout: number) {
         if (dt > 0) {
-            console.log("updating")
+            //console.log("updating")
             
-            
+            this.sceneManager.currScene.update(dt)
             
             for (let sys of this.systems) {
                 sys.update(dt)
@@ -240,7 +239,7 @@ export class Engine {
                     this.serverUpdate(Number(realDelta), timeout)
                     Engine.time += Number(realDelta)
                     this.serverTime = currTime
-                    console.log(Engine.time) 
+                    //console.log(Engine.time) 
                 }
 
             }, timeout)

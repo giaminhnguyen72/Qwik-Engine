@@ -55,6 +55,27 @@ class RigidBody implements Forceable {
         this.force.y += force.y
         this.force.z += force.z
     }
+    lerp(targetPos: Vector3, dt: number) {
+        
+    }
+    moveTowards(targetPosition: Vector3, dt: number, speed: number, radius: number = 0.05) {
+        
+        let velNorm = {
+            x: targetPosition.x - this.pos.x,
+            y: targetPosition.y - this.pos.y,
+            z: targetPosition.z
+        }
+        let normalPos = Math.sqrt(velNorm.x**2 +velNorm.y**2)
+        velNorm.x /= normalPos
+        velNorm.y /= normalPos
+
+        velNorm.x *= speed
+        velNorm.y *= speed
+
+        this.pos.x += velNorm.x *dt
+        this.pos.y += velNorm.y *dt
+        return velNorm
+    }
     update(dt: number, ctx?: CanvasRenderingContext2D | undefined): void {
         
 

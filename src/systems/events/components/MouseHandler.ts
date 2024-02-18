@@ -76,6 +76,7 @@ export class MouseEmitter implements Emitter<ClickEvent> {
     componentId?: number | undefined;
     system!: System<Component>;
     engineType:EngineType 
+    maxInput: number = 10
     constructor(engine: EngineType) {
         this.engineType = engine
     }
@@ -88,12 +89,98 @@ export class MouseEmitter implements Emitter<ClickEvent> {
                     let rect = canvas.getBoundingClientRect()
                     let x = event.x / rect.width * canvas.width
                     let y = event.y / rect.height * canvas.height
+                    if (this.events.length > this.maxInput) {
+                        this.events.shift()
+                    }
                     this.events.push({
                         pos: {x: x , y: y , z: 0},
                         eventName: "click"
                     })
                 })
                 window.addEventListener("dblclick", (event) => {
+                    if (this.events.length > this.maxInput) {
+                        this.events.shift()
+                    }
+                    this.events.push({
+                        pos: {x: event.x, y:event.y, z: 0},
+                        eventName: "dblclick"
+                    })
+                })
+            }
+            
+        }
+    }
+    addListener(component: Listener<ClickEvent>): void {
+        this.listeners.set(component.componentId as number, component)
+    }
+    emit(event: ClickEvent): void {
+        for (let listener of this.listeners) {
+            listener[1].execute(event)
+        }
+    }
+    removeListener(id: number): void {
+        this.listeners.delete(id)
+    }
+    getListeners() {
+        return []
+    }
+    getEventType(): string {
+        return "MOUSE"
+    }
+    
+    update(dt: number, ctx?: CanvasRenderingContext2D | undefined): void {
+        for (let i = this.events.length - 1; i >= 0; i--) {
+            this.emit(this.events[i])
+            this.events.pop()
+        }
+    }
+    copy(component: Component): void {
+        this.alive = component.alive
+        this.visible = component.alive
+    }
+    toJSON() {
+        return {
+            visible: this.visible,
+            alive:  this.alive
+        }
+    }
+
+}
+export class MouseEmitter3d implements Emitter<ClickEvent> {
+    listeners: Map<number, Listener<ClickEvent>> = new Map()
+    events: ClickEvent[] = []
+    entity?: number | undefined;
+    visible: boolean = true;
+    alive: boolean = true;
+    engineTag: string = "EVENTHANDLER";
+    componentId?: number | undefined;
+    system!: System<Component>;
+    engineType:EngineType 
+    maxInput: number = 10
+    constructor(engine: EngineType) {
+        this.engineType = engine
+    }
+    initialize(system: EventSystem<ClickEvent>): void {
+        system.registerEmitter(this)
+        if (this.engineType != EngineType.SOCKETSERVER) {
+            const canvas = document.querySelector('canvas')
+            if (canvas) {
+                window.addEventListener("click", (event) => {
+                    let rect = canvas.getBoundingClientRect()
+                    let x = event.x / rect.width * canvas.width
+                    let y = event.y / rect.height * canvas.height
+                    if (this.events.length > this.maxInput) {
+                        this.events.shift()
+                    }
+                    this.events.push({
+                        pos: {x: event.clientX , y: event.clientY , z: 0},
+                        eventName: "click"
+                    })
+                })
+                window.addEventListener("dblclick", (event) => {
+                    if (this.events.length > this.maxInput) {
+                        this.events.shift()
+                    }
                     this.events.push({
                         pos: {x: event.x, y:event.y, z: 0},
                         eventName: "dblclick"

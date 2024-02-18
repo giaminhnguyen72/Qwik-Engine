@@ -63,11 +63,14 @@ export class SceneManager {
 
 
         
+        
+        
+
+    }
+    initialize(systems: System<Component>[]) {
         for (let sys of systems) {
             sys.sceneManager = this
         }
-        
-
     }
     queryEngine<T extends System<Component>>(engineTag: string, type: {new(...args: any[]) : T}) {
         let engine = this.systems.get(engineTag)
@@ -90,13 +93,8 @@ export class SceneManager {
         
     }
     getCurrentScene(): Scene {
-        let curr = this.scenes.get(this.currentIdx)
-        if (curr) {
-            return  curr
-        } else {
-            throw Error("Cant get current scene")
-        }
-         
+        return  this.currScene
+        
     }
     setScene(idx: string) {
         let scene = this.scenes.get(idx)

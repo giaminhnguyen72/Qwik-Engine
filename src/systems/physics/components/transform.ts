@@ -30,6 +30,30 @@ export class Transform implements Transformable {
 
 
     }
+    moveTowards(targetPosition: Vector3, dt: number, speed: number, radius: number = 0.05) {
+        
+        let velNorm = {
+            x: targetPosition.x - this.pos.x,
+            y: targetPosition.y - this.pos.y,
+            z: 0
+        }
+        let normalPos = Math.sqrt(velNorm.x* velNorm.x +velNorm.y*velNorm.y)
+        if (normalPos > 0) {
+            velNorm.x /= normalPos
+            velNorm.y /= normalPos
+        } else {
+            velNorm.x = 0
+            velNorm.y = 0
+        }
+        
+
+        velNorm.x *= speed
+        velNorm.y *= speed
+
+        this.pos.x += velNorm.x *dt
+        this.pos.y += velNorm.y *dt
+        return velNorm
+    }
     copy(transform: Transform): void {
         
         this.pos.x = transform.pos.x
@@ -63,15 +87,15 @@ export class Transform implements Transformable {
         this.pos.z = this.pos.z  + this.vel.z * dt
     }
     toJSON() {
+
         return {
-            pos: this.pos,
+            pos: {x: Math.floor(this.pos.x),y: Math.floor(this.pos.y), z: Math.floor(this.pos.z)},
             vel: this.vel,
             accel: this.accel,
             entity: this.entity,
             componentId: this.componentId,
             visible:  this.visible,
-            alive: this.alive,
-            engineTag: "PHYSICS"
+            alive: this.alive
         }
     }
     

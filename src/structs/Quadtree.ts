@@ -40,6 +40,12 @@ export class QuadTree<T extends Rectangular> {
     toString() {
         return this.parentNode.toString()
     }
+    findAllIntersections() {
+        let intersections: T[][] = []
+        this.parentNode.findAllIntersections( intersections)
+        return intersections
+
+    }
 
 }
 class QuadTreeNode<T extends Rectangular> {
@@ -52,6 +58,40 @@ class QuadTreeNode<T extends Rectangular> {
         this.area = size
         this.depth = depth
         this.resize(size)
+    }
+    findAllIntersections( intersections: T[][]) {
+        for (let i = 0; i < this.items.length; i++) {
+            for (let j = 0; j < i; j++) {
+                let col1 = this.items[i]
+                let col2= this.items[j]
+                if (collides(col1.getRectangle(), col2.getRectangle())) { 
+                    intersections.push([col1,col2])
+                }
+                //console.log("THis element is mapped: " + i.componentId)
+            }
+        }
+        if (this.children.length > 0 ) {
+            for (let c of this.children) {
+                for (let v of this.items) {
+                    this.findDescendentIntersections(v,intersections)
+                }
+            }
+            for (let c of this.children) {
+                c.findAllIntersections(intersections)
+            }
+        }
+    }
+    findDescendentIntersections( col: T, intersections: T[][]) {
+        for (let v of this.items) {
+            if (collides(col.getRectangle(),v.getRectangle())) {
+                intersections.push([v, col])
+            }
+        }
+        if (this.children.length > 0 ) {
+            for (let c of this.children) {
+                c.findDescendentIntersections(col, intersections)
+            }
+        }
     }
     query(box: Rectangle): T[] {
         let list: T[] = []

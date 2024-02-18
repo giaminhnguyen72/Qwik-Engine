@@ -4,6 +4,7 @@ import { Vector3 } from "../../../types/components/physics/transformType.js";
 import { Entity } from "../../../types/Entity.js";
 import { System } from "../../../types/system.js";
 import { Transform } from "../../physics/components/transform";
+import { Camera } from "./2d/Camera.js";
 
 export class Text implements Renderable {
     entity!: number;
@@ -36,10 +37,10 @@ export class Text implements Renderable {
 
     }
     context!: ContextInfo;
-    render(): void {
+    render(cam: Camera): void {
         if (this.context) {
-            this.context.ctx.fillText(this.text, this.pos.x, this.pos.y)
-        }
+            this.context.ctx.fillText(this.text, this.pos.x - cam.pos.x, this.pos.y - cam.pos.y)
+        } 
     }
     initialize() {
 

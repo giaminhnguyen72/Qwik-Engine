@@ -9,7 +9,7 @@ export interface Rectangle extends Shape {
     rot: number
     dim: {length:number, height: number}
 }
-export function rectangleCopy(receiver: Rectangle, sender: Rectangle) {
+function rectangleCopy(receiver: Rectangle, sender: Rectangle) {
         receiver.dim.height = sender.dim.height
         receiver.dim.length = sender.dim.length
         

@@ -10,6 +10,8 @@ import { Shape, Rectangle } from "./components/collision/shape.js"
 import { Acceleration, Force, Position, Vector3, Velocity } from "./components/physics/transformType.js"
 import { Entity} from "./Entity.js"
 import { EventSystem, System } from "./system.js"
+import { Camera } from "../systems/graphics/components/2d/Camera.js"
+
 
 export interface Component {
     
@@ -29,8 +31,8 @@ export interface Renderable extends Component {
     context: ContextInfo
     rendered: boolean
     pos: Position
-    render(strategyArr: Iterable<any>): void
-    initialize(graphicsEngine: GraphicsEngine): void
+    render(camera: Camera): void
+    initialize: ((graphicsEngine: GraphicsEngine)=>  void  )
     update(dt: number, ctx?: CanvasRenderingContext2D): void
     getRectangle(): Rectangle
     unmount(): void
@@ -52,6 +54,7 @@ export interface Renderable extends Component {
     collides(collider: Collideable): void
     checkCollision(collider: Collideable):boolean
     update(dt: number, ctx?: CanvasRenderingContext2D): void
+    getRectangle(): Rectangle
     
 }
 export interface Listenable extends Component{

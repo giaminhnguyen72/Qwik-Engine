@@ -19,10 +19,12 @@ export class EventHandler implements System<Listenable>, EventSystem<KeyEvent | 
     deleted: Listenable[] = []
     listeners: Listener<EngineEvent>[] = []
     emitters: Map<string, Emitter<EngineEvent>> = new Map()
-    constructor(eventConfig: EventConfig ={
+
+    constructor(sceneManager: SceneManager, eventConfig: EventConfig ={
         keyboard: false,
         mouse: false
     }) {
+        this.sceneManager = sceneManager
         this.components = new Map<number, Listenable>()
 
         this.eventConfig = eventConfig

@@ -1,12 +1,15 @@
 
-import { Component, Renderable,  } from "../../../types/components.js";
-import { Entity } from "../../../types/Entity.js";
-import { Scene } from "../../../core/scene.js";
-import { Transform } from "../../physics/components/transform";
-import { System } from "../../../types/system.js";
-import { ContextInfo } from "../../../core/context.js";
-import { getTopX, getTopY, Rectangle } from "../../../types/components/collision/shape.js";
-import { Position } from "../../../types/components/physics/transformType";
+import { Component, Renderable,  } from "../../../../types/components.js";
+import { Entity } from "../../../../types/Entity.js";
+import { Scene } from "../../../../core/scene.js";
+import { Transform } from "../../../physics/components/transform";
+
+import { ContextInfo } from "../../../../core/context.js";
+import { getTopX, getTopY, Rectangle } from "../../../..../../../types/components/collision/shape.js";
+
+import { Camera } from "./Camera.js";
+import { Position } from "../../../../../../engine/src/types/components/physics/transformType.js";
+import { System } from "../../../../../../engine/src/types/system.js";
 
 export class Sprite implements Component, Renderable {
     entity!: number;
@@ -75,12 +78,14 @@ export class Sprite implements Component, Renderable {
     getRectangle() {
         return this.shape
     }
-    render(): void {
-        if (this.context.ctx) {
-            let x = getTopX(this.shape)
+    render(cam:Camera): void {
+        let x = getTopX(this.shape)
             let y = getTopY(this.shape)
-            this.context.ctx.drawImage(this.image, x, y, this.shape.dim.length, this.shape.dim.height)
-        }
+
+            let screenX = cam.scale.x * (x ) - cam.transform.x 
+            let screemY = cam.scale.y* (y) - cam.transform.y
+            this.context.ctx.drawImage(this.image,screenX, screemY , this.shape.dim.length * cam.scale.x, this.shape.dim.height * cam.scale.y)
+
 
         
     }

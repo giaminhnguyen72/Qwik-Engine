@@ -1,24 +1,29 @@
 import { GraphicsConfig } from "./config"
 
 export class ContextInfo {
-    ctx: CanvasRenderingContext2D
-    canvas: HTMLCanvasElement
+    ctx!:  OffscreenCanvasRenderingContext2D 
+    canvas: OffscreenCanvas
     div: HTMLDivElement
     graphicsConfig: GraphicsConfig
+    realCanvas: HTMLCanvasElement
+
     constructor(graphicsConfig: GraphicsConfig) {
         this.graphicsConfig = graphicsConfig
         this.graphicsConfig = graphicsConfig
-
+        
         document.documentElement.style.height = '100%'
         document.documentElement.style.width = '100%'
         document.body.style.height = "100%"
         document.body.style.width = "100%"
         document.body.style.margin = "0"
         this.setup()
-        this.canvas = this.generateCanvas() as HTMLCanvasElement
+        this.realCanvas = this.generateCanvas() as HTMLCanvasElement
+        this.realCanvas.height = 1000
+        this.realCanvas.width = 2000
+        this.canvas = new OffscreenCanvas(1000, 500)
         
         
-        this.ctx = this.canvas.getContext("2d") as CanvasRenderingContext2D
+        //this.ctx =this.canvas.getContext("2d") as OffscreenCanvasRenderingContext2D
         this.div = this.generateDiv(this.graphicsConfig.parent) ;
     }
         
@@ -31,7 +36,7 @@ export class ContextInfo {
         div.style.zIndex = "0"
         div.style.display = "flex"
         div.style.justifyContent = "center"
-        div.appendChild(this.canvas)
+        div.appendChild(this.realCanvas)
         document.body.appendChild(div)
 
         console.log("test")
@@ -43,6 +48,8 @@ export class ContextInfo {
         console.log(this.parseStyle(this.graphicsConfig.style))
         console.log("Before")
         canvas.setAttribute('style', this.parseStyle(this.graphicsConfig.style))
+        
+
         return canvas
     }
     getCtx() {

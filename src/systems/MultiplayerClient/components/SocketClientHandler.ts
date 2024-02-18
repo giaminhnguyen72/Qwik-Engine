@@ -16,7 +16,8 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
     emissionQueue: SocketEvent[] = []
     listenQueue: Map<string, SocketEvent>= new Map()
     listenerLock: boolean = false
-    socketMap: {[key:string]:(data: any)=>void}
+    socketMap: Map<string, (data:any)=> void>
+
     events: Map<string, (data: any) => void>;
     //{[key:string]:{[event:string]:(click: SocketEvent)=>void}}
     stage: Stage
@@ -31,7 +32,7 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
     entityGenerator: Map<string, () => Entity> = new Map()
     time: number= 0
     constructor(multiplayerStage: Stage, socketMap: {[key:string]:(data: any)=>void}, socketConfig: {engineType: EngineType, entityGeneratorMap?: Map<string,() => Entity>}) {
-        this.socketMap = socketMap
+
         this.stage = multiplayerStage
         this.events = new Map()
         this.socketConfig = socketConfig
@@ -40,20 +41,36 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
                 this.entityGenerator.set(label, factoryMethod)
             }
         }
+        this.socketMap = new Map()
+        Object.entries(socketMap).map(([k, v]) => {
+            this.socketMap.set(k, v)
+        })
 
+    }
+    addEvent(event:string, callback: (data: any) => void) {
+        this.socketMap.set(event, callback)
     }
     addClass<T extends Entity>(className: string, type: {new(): T}) {
         let callback = () => {
             return new type()
         }
+        
         this.entityGenerator.set(className, callback)
         
+    }
+    addClassConfig(config: {[entityTag: string] : {new(): Entity}}) {
+        Object.entries(config).map(([entityTag,Obj]) => {
+            
+            this.addClass<Entity>(entityTag, Obj)
+
+
+        })
     }
     initialize(system: EventSystem<SocketEvent>): void {
         console.log("Socket Client initialization")
         system.registerEmitter(this)
         system.registerListener(this)
-        Object.entries(this.socketMap).map(([k, v]) => {
+        for (let [k, v] of this.socketMap) {
             this.events.set(k, v)
             SocketManager.getInstance().on(k, (data: any) => {
                 let func = this.events.get(k)
@@ -64,9 +81,11 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
                     })
                 }
             })
-        })
+        }
+
         this.events.set("deleted", (data: number[]) => {
-            
+            console.log("Nothing has been removed so far")
+
             for (let i of data) {
                 let currScene = this.stage
                 let entity = currScene.entities.get(i)
@@ -74,11 +93,11 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
                     currScene.removeEntity(entity.id as number)
                     console.log("Entity " + entity.id + " has been removed")
 
-                }
+                } 
             }
-            throw new Error("" + data + " has been deleted")
+
         })
-        this.events.set("update", (serverData: {timestamp: number, data: EntityPacket[], time: number}) => {
+        this.events.set("update", (serverData: {timestamp: number, data: EntityPacket[]}) => {
             let scene = this.stage
             
 
@@ -147,6 +166,18 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
                         data: serverData
                     })
                 }
+            
+            
+            
+            
+        })
+        SocketManager.getInstance().on("deleted", (data: number[]) => {
+            let func = this.events.get("deleted")
+            this.listenQueue.set("deleted", {
+                event: "deleted",
+                data: data
+            })
+
             
             
             

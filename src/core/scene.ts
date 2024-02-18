@@ -7,8 +7,6 @@ import { Entity} from "../types/Entity.js"
 import { System } from "../types/system.js"
 import { EngineType } from "../constants/engineType.js"
 
-import { SocketServer } from "../systems/MultiplayerServer/components/SocketServerHandler.js"
-import { TimedSpriteSheet } from "../systems/graphics/components/Spritesheet.js"
 
 export interface Scene {
     name: string
@@ -17,12 +15,17 @@ export interface Scene {
     background?: string
     time: number
     entities: Map<number, Entity>
-
+    worldBounds: {xMin: number, xMax: number, yMin: number, yMax: number, zMin: number, zMax: number }
     addEntity: (entity: Entity) => Entity
     getSceneConfig() : SceneConfig
     getUniqueId(): number
     getUniqueComponentId(): number,
     removeEntity(id: number): void
+    classMap?: Map<string, Map<number, Entity>> 
+    querySystem<T extends System<Component>> (type: {new(...args: any[]): T}, engineTag: string):  System<Component> | undefined
+    querySys (engineTag: string): System<Component> | undefined
+    queryComponent<T extends Component>(type: {new(...args: any[]): T}, entityTag: string):  T[]
+    update(dt: number): void
 }
 export class Stage implements Scene, Entity {
     components: Component[] = []
@@ -33,13 +36,36 @@ export class Stage implements Scene, Entity {
     entities: Map<number, Entity> = new Map()
     sceneManager!: SceneManager
     classMap: Map<string, Map<number, Entity>> = new Map()
+    worldBounds: {xMin: number, xMax: number, yMin: number, yMax: number, zMin: number, zMax: number }
     id: number = 0
     componentId = 0
-    constructor(stageName: string, ...components: Component[]) {
+    addedEntities: Entity[] = []
+    removedEntities: number [] = []
+    constructor(stageName: string, worldBound: {xMin: number, xMax: number, yMin: number, yMax: number, zMin: number, zMax: number }, ...components: Component[]) {
         this.name = stageName
+        this.worldBounds = worldBound
         for (let i of components) {
             this.components.push(i)
         }
+    }
+    newEntityQueue?: Map<number, Entity> | undefined
+    background?: string | undefined
+    update(dt: number): void {
+        while (this.addedEntities.length > 0) {
+            let ent = this.addedEntities.pop()
+            if (ent) {
+                this.executeEntityAdd(ent)
+            }
+            
+        }
+        while (this.removedEntities.length > 0) {
+            let ent = this.removedEntities.pop()
+            if (ent) {
+                this.executeEntityRemove(ent)
+            }
+            
+        }
+
     }
     
     getSceneConfig(): SceneConfig {
@@ -94,6 +120,10 @@ export class Stage implements Scene, Entity {
     }
 
     addEntity(entity: Entity): Entity {
+        this.addedEntities.push(entity)
+        return entity
+    }
+    executeEntityAdd(entity: Entity) {
         let uniqueId = this.sceneManager.getUniqueId()
 
     entity.id = uniqueId
@@ -132,6 +162,9 @@ export class Stage implements Scene, Entity {
     return entity
     }
     removeEntity(id: number) {
+        this.removedEntities.push(id)
+    }
+    executeEntityRemove(id : number) {
         let entity : Entity | undefined = this.entities.get(id)
     
     if (entity) {
@@ -238,6 +271,9 @@ export class Stage implements Scene, Entity {
             return id
         }
         
+    }
+    clone() {
+        return this
     }
 }
 // For client Class

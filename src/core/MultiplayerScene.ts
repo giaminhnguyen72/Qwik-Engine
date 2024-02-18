@@ -9,44 +9,73 @@ import { Scene } from "./scene"
 import { SocketServer } from "../systems/MultiplayerServer/components/SocketServerHandler.js"
 
 export class MultiplayerStage implements Scene, Entity {
-    client: SocketServer = new SocketServer({}, EngineType.SOCKETSERVER)
-    components: Component[] = [this.client]
+    
+    components: Component[] = []
     scene: Scene = this
     className: string = "STAGE"
     name: string 
     time: number = 0
-    entities: Map<number, Entity> = new Map()
-    classMap: Map<string, Map<number, Entity>>
+    addedEntities: Entity[] = []
+    removedEntities: number[] = []
     sceneConfig: SceneConfig = {entities: []}
     sceneManager!: SceneManager
+
+    entities: Map<number, Entity> = new Map()
+    classMap: Map<string, Map<number, Entity>>
     id: number = 0
     componentId = 0
-    constructor(stageName: string, ...entities: Entity[]) {
+    worldBounds: {xMin: number, xMax: number, yMin: number, yMax: number, zMin: number, zMax: number }
+    constructor(stageName: string, worldBound: {xMin: number, xMax: number, yMin: number, yMax: number, zMin: number, zMax: number }, ...entities: Entity[]) {
         this.name = stageName
-        
+        this.worldBounds = worldBound
         this.classMap = new Map()
         for (let i of entities) {
             this.sceneConfig.entities.push(i)
         }
         this.sceneConfig.entities.push(this)
     }
+    newEntityQueue?: Map<number, Entity> | undefined
+    background?: string | undefined
+    update(dt: number): void {
+        while (this.addedEntities.length > 0) {
+            let ent = this.addedEntities.pop()
+            if (ent) {
+                this.executeEntityAdd(ent)
+            }
+            
+        }
+        while (this.removedEntities.length > 0) {
+            let ent = this.removedEntities.pop()
+            if (ent) {
+                this.executeEntityRemove(ent as number)
+            }
+            
+        }
 
+    }
 
+    // Gets all components of type T with the given entity tag
+    // This works because every entity has the same components in the same order
     queryComponent<T extends Component>(type: {new(...args: any[]): T}, entityTag: string) {
+        // We retrieve the list of entities of the given entity tag
         let entityMap = this.classMap.get(entityTag)
         let componentList: T[] = []
         if (entityMap) {
             let i = 0
             let indices = []
+            // We loop through each entity in the list of entities
             for (let entity of entityMap) {
                 if (i == 0 ) {
-                    
+                    //on the first iteration, we list the indices of each component that are of type type
+                    // we add it to the array indices so we dont have to loop through every single component
                     for (let componentIdx = 0; componentIdx < entity[1].components.length; componentIdx++) {
                         if (entity[1].components[componentIdx] instanceof type) {
                             indices.push(componentIdx)
                         }
                     }
                 } 
+                // We then use the indices to loop through the each index in the component list to find the components
+                // 
                 for (let idx of indices) {
                     let proposedComponent = entity[1].components[idx]
                     if (proposedComponent instanceof type) {
@@ -82,6 +111,11 @@ export class MultiplayerStage implements Scene, Entity {
   
     addEntity( entity: Entity): Entity {
         
+        this.addedEntities.push(entity)
+        return entity
+        
+    }
+    executeEntityAdd(entity:Entity) {
         let uniqueId = this.sceneManager.getUniqueId()
         entity.id = uniqueId
         entity.scene = this
@@ -103,8 +137,9 @@ export class MultiplayerStage implements Scene, Entity {
             if (compList) {
                 let system: System<Component> | undefined= this.sceneManager.systems.get(comp.engineTag)
                 if (system) {
-
-                    system.register(comp, this.getUniqueComponentId())
+                    let id = this.getUniqueComponentId()
+                    comp.componentId = id
+                    system.register(comp, id)
                     
                 } 
 
@@ -117,11 +152,14 @@ export class MultiplayerStage implements Scene, Entity {
                 
             }
         }
-        console.log("successfully added entity")
+
         
         return entity
     }
     removeEntity(id: number) {
+        this.removedEntities.push(id)
+    }
+    executeEntityRemove(id: number) {
         let entity : Entity | undefined = this.entities.get(id)
         console.log(entity?.className)
         
@@ -144,10 +182,11 @@ export class MultiplayerStage implements Scene, Entity {
             }
             
         }
-        this.client.deleted.push(id)
+        SocketServer.getInstance(EngineType.SOCKETSERVER).deleted.push(id)
+        
 
     }
-    return entity
+        return entity
     }
     addServerEntity(scene:Scene, entity: Entity) {
         if (entity.id == null || entity.id == undefined) {
@@ -240,5 +279,8 @@ export class MultiplayerStage implements Scene, Entity {
             return id
         }
         
+    }
+    clone() {
+        return this
     }
 }

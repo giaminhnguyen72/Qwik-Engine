@@ -44,7 +44,7 @@ export class Button implements DomElement {
     copy(component: Component): void {
         throw new Error("Method not implemented.");
     }
-    render(strategyArr: Iterable<any>): void {
+    render(): void {
 
         if (!this.visible) {
             this.context.div.appendChild(this.element)
@@ -52,14 +52,14 @@ export class Button implements DomElement {
         }
         
     }
-    initialize(): void {
+    initialize(graphics: GraphicsEngine): void {
         let element = document.createElement("BUTTON");
         this.element = element
         this.element.style.cssText =  this.style
         this.element.innerHTML = this.text
         this.element.onclick = this.onClick
         this.element.id = this.id
-
+        graphics.addUIComponent(this)
         
 
     }
@@ -104,7 +104,7 @@ export class ImageButton implements DomElement {
     copy(component: Component): void {
         throw new Error("Method not implemented.");
     }
-    render(strategyArr: Iterable<any>): void {
+    render(): void {
 
         if (!this.visible) {
             this.context.div.appendChild(this.element)
@@ -112,7 +112,7 @@ export class ImageButton implements DomElement {
         }
         
     }
-    initialize(): void {
+    initialize(graphics: GraphicsEngine): void {
         let element = document.createElement("BUTTON");
         this.element = element
         this.element.style.cssText =  this.style
@@ -121,5 +121,6 @@ export class ImageButton implements DomElement {
         this.childImage = new Image()
         this.childImage.src = this.src
         this.element.appendChild(this.childImage)
+        graphics.addUIComponent(this)
     }
 }

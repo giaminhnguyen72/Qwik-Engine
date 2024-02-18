@@ -4,19 +4,67 @@ import { SceneManager } from "../../core/managers/SceneManager.js";
 import { System } from "../../types/system.js";
 export class ScriptingEngine implements System<ScriptObject> {
     tag: string ="SCRIPTING"  ;
-    components: Map<number, ScriptObject>;
+    components: Map<number, Script>;
     deleted: ScriptObject[] = []
     engineType: EngineType
     sceneManager!: SceneManager
-    objectDB: Map<string, Script[]> = new Map()
-    constructor(engineType: EngineType) {
+    objectDB: Map<string, Set<Script>> = new Map()
+    fieldDB: Map<string, string[]> = new Map()
+
+
+
+    constructor(sceneManager: SceneManager, engineType: EngineType) {
         this.components = new Map<number, Script>()
         this.engineType = engineType
+        this.sceneManager = sceneManager
     }
-    queryScript(className :string) {
+    queryClass(className :string) {
         let item = this.objectDB.get(className);
-        return item
+        if (item) {
+            
+            return item
+        } else {
+            return []
+        }
+
     }
+    addFieldEntry(field: string, classString:string) {
+        let classEntries = this.fieldDB.get(field)
+        if (classEntries) {
+            for (let i of classEntries) {
+                if (i == classString) {
+                    return
+                }
+            }
+            classEntries.push(classString)
+        } else {
+            let arr = []
+            arr.push(classString)
+            this.fieldDB.set(field, arr)
+        }
+    }
+    queryFields(field: string) {
+
+        let classEntries = this.fieldDB.get(field)
+        let scriptObjects: Script[] = []
+        if (classEntries){
+            for (let i of classEntries) {
+                let classes = this.objectDB.get(i)
+                if (classes) {
+                    for (let c of classes) {
+                        scriptObjects.push(c)
+                    }
+                }
+                
+            }
+            return scriptObjects
+        } else {
+            return []
+        }
+    }
+
+    
+
     register(comp: Script, id: number): void {
         if (comp.componentId == undefined || comp.componentId == null) {
             
@@ -29,7 +77,18 @@ export class ScriptingEngine implements System<ScriptObject> {
             comp.system = this
             this.components.set(comp.componentId, comp)
         }
-        this.objectDB.set(comp.className, [comp])
+        let list = this.objectDB.get(comp.className)
+        if (list) {
+            list.add(comp)
+        } else {
+            let set: Set<Script> = new Set()
+            set.add(comp)
+            this.objectDB.set(comp.className, set)
+        }
+
+        this.initialize(comp)
+
+        
     }
     
     unregister(comp: number): void {
@@ -38,11 +97,18 @@ export class ScriptingEngine implements System<ScriptObject> {
             deleted.alive = false
 
             this.deleted.push(deleted)
+            let set = this.objectDB.get(deleted.className)
+            if (set) {
+                set.delete(deleted)
+            }
 
        }
     
     }
     initialize(comp: Script) {
+        if (comp.init) {
+            comp.init(this)
+        }
 
     }
     update(dt: number): void {
@@ -57,8 +123,10 @@ export class ScriptingEngine implements System<ScriptObject> {
             
         }
         while (this.deleted.length > 0 ) {
+            console.log("Entity i deleted       A         D")
             let comp = this.deleted.pop()
             this.components.delete(comp?.componentId as number)
+
         }
 
     }

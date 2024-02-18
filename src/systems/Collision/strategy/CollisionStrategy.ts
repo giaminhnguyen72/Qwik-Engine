@@ -1,22 +1,30 @@
-import { CollisionSystem } from "../../../../../engine/src/systems/Collision/CollisionSystem.js";
-import { Collideable } from "../../components.js";
-import { System } from "../../system.js";
+import { CollisionSystem } from "../CollisionSystem.js";
+import { Collideable } from "../../../types/components.js";
+import { System } from "../../../types/system.js";
+import { Rectangle } from "../../../../../engine/src/types/components/collision/shape.js";
 
 export interface CollisionStrategy {
     system: CollisionSystem
     deleted: Collideable[]
     update(dt: number): void
     registerComponent(component:Collideable): void
+    deregisterComponent(component: Collideable): void
+    query(rectangle: Rectangle): Collideable[]
 }
 export class NaiveCollision implements CollisionStrategy {
     system: CollisionSystem
     constructor(system:CollisionSystem) {
         this.system = system
     }
+    query(rectangle: Rectangle): Collideable[] {
+        throw new Error("Method not implemented.");
+    }
     registerComponent(component: Collideable): void {
 
     }
-    
+    deregisterComponent(component: Collideable): void {
+
+    }
     deleted: Collideable[] = [];
 
     update(dt: number): void {
@@ -46,6 +54,12 @@ export class SpatialHashGridStrategy implements CollisionStrategy{
         this.deleted = []
         this.system.config.bounds
         this.grid = new SpatialHashGrid(this.system.config.bounds, 5, 5)
+
+    }
+    query(rectangle: Rectangle): Collideable[] {
+        throw new Error("Method not implemented.");
+    }
+    deregisterComponent(component: Collideable): void {
 
     }
     update(dt: number): void {

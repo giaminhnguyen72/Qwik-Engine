@@ -3,6 +3,7 @@ import { ScriptingEngine } from "../ScriptingEngine.js";
 import { Component } from "../../../types/components.js";
 import { Entity } from "../../../types/Entity.js";
 import { System } from "../../../types/system.js";
+import { Engine } from "../../../../../engine/src/core/engine.js";
 
 export abstract class ScriptObject implements Component {
     entity?: number | undefined;
@@ -23,12 +24,15 @@ export class Script implements ScriptObject {
     componentId?: number | undefined;
     system!: ScriptingEngine
     engineType: EngineType
-    className!: string 
+    className: string 
     properties: Map<string, any> = new Map()
     callback?: (dt: number, data?: any ) => void
-    constructor(callback?: (dt: number, data: any ) => void, engineType: EngineType = EngineType.CLIENTONLY) {
+    init?: (engine: ScriptingEngine) => void
+    constructor(className: string,  engineType: EngineType = EngineType.CLIENTONLY,callback?: (dt: number, data: any ) => void, init?: (engine: ScriptingEngine) => void,) {
         this.callback = callback
+        this.className = className
         this.engineType = engineType
+        this.init = init
     }
     copy(script: Script): void {
         this.className = script.className
@@ -42,8 +46,10 @@ export class Script implements ScriptObject {
     }
     visible: boolean = true;
     alive: boolean = true;
-    initialize() {
-
+    initialize(script: ScriptingEngine) {
+        if (this.init) {
+            this.init(script)
+        }
     }
     getClasses(classId: string) {
         let classArr = this.system.objectDB.get(classId);
@@ -53,8 +59,9 @@ export class Script implements ScriptObject {
         return []
     }
     
-    addProperty(property:string, intialValue?: any ) {
-        this.properties.set(property, 0)
+    setProperty(property:string, initialValue: any ) {
+
+        this.properties.set(property, initialValue)
     }
     setClass(classID: string) {
         this.className= classID
@@ -62,11 +69,11 @@ export class Script implements ScriptObject {
     setCallBack(func: (dt: number) => void) {
         this.callback = func
     }
-    setInit(func: (dt: number) => void) {
-
+    setInit(func: (engine: ScriptingEngine) => void) {
+        this.init = func
     }
     update(dt: number, ctx?: CanvasRenderingContext2D | undefined): void {
-        if (this.callback) {
+        if (this.callback && this.engineType == Engine.engineConfig.engineType) {
             this.callback(dt)
         }
         

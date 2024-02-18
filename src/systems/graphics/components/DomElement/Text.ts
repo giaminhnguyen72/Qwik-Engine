@@ -15,18 +15,19 @@ export class Label implements DomElement {
     rendered: boolean = true;
     pos: Position ={x:0, y:0, z:0};
     text: string
-    render(strategyArr: Iterable<any>): void {
+    render(): void {
         
         if (!this.visible) {
             this.context.div.appendChild(this.element)
             this.visible = true
         }
     }
-    initialize(): void {
+    initialize(system: GraphicsEngine): void {
         this.element = document.createElement(this.htmlTag)
         this.element.style.cssText  = this.style
         this.element.id = this.id
         this.element.textContent = this.text
+        system.addUIComponent(this)
     }
     entity?: number | undefined;
     visible: boolean = true;

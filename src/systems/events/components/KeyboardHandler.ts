@@ -15,7 +15,7 @@ export class KeyboardListener implements Listener<KeyEvent>{
     alive: boolean = true;
     engineTag: string= "EVENTHANDLER";
     componentId?: number | undefined;
-
+    
     constructor(clickMap: {[key:string]:(event:KeyEvent)=>void}) {
         
         this.events = new Map<string, (event:KeyEvent)=>void>()
@@ -74,6 +74,7 @@ export class KeyBoardEmitter implements Emitter<KeyEvent> {
     componentId?: number | undefined;
     system!: System<Component>;
     engineType:EngineType 
+    maxInput: number = 10
     constructor(engine: EngineType) {
         this.engineType = engine
     }
@@ -82,6 +83,9 @@ export class KeyBoardEmitter implements Emitter<KeyEvent> {
 
         if (this.engineType != EngineType.SOCKETSERVER) {
             window.addEventListener("keydown", (event) => {
+                if (this.events.length > this.maxInput) {
+                    this.events.shift()
+                }
                 this.events.push({
                     eventName: "keydown",
                     key: event.key

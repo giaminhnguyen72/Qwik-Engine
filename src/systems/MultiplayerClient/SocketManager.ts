@@ -4,6 +4,7 @@ import { Component, Emitter, EngineEvent, Listenable, Listener, Renderable } fro
 import { EventSystem, System } from "../../types/system.js";
 import { EventConfig, SocketClientConfig } from "../../core/config.js";
 import { SceneManager } from "../../core/managers/SceneManager.js";
+import parser from 'socket.io-msgpack-parser'
 interface SocketEvent extends EngineEvent{
     eventName: string
     key: string
@@ -21,7 +22,9 @@ export class SocketManager implements EventSystem<SocketEvent>{
     deleted: Listenable[] = []
     static getInstance(): Socket {
         if (SocketManager.socket == undefined || SocketManager.socket == null) {
-            this.socket = io()
+            this.socket = io({
+                parser: parser
+            })
         }
         return SocketManager.socket
     }
@@ -32,14 +35,7 @@ export class SocketManager implements EventSystem<SocketEvent>{
         this.sceneManager = sceneManager
         
 
-        window.addEventListener("click", (event) => {
-            SocketManager.getInstance().emit("click")
-            
-        })
-        window.addEventListener("keydown", (event) => {
-            SocketManager.getInstance().emit("keydown", event.key)
-            
-        })
+
         
     }
     getConfig() {

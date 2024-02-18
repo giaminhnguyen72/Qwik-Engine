@@ -56,18 +56,19 @@ export class Div implements DomElement {
 
         
     }
-    render(strategyArr: Iterable<any>): void {
+    render(): void {
         
         if (!this.visible) {
             this.context.div.appendChild(this.element)
             this.visible = true
         }
     }
-    initialize(): void {
+    initialize(system: GraphicsEngine): void {
         this.element = document.createElement('div');
         this.element.style.cssText =  this.style
         this.element.id = this.id
-    
+
+        system.addUIComponent(this)
         for (let i = 0; i < this.children.length; i++) {
             this.children[i].entity = this.entity
             this.children[i].visible = true
