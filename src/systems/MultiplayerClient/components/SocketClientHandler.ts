@@ -190,10 +190,7 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
         
     }
     addListener(component: Listener<SocketEvent>): void {
-        let events = component.getEvents()
-        for (let event of events) {
-            SocketManager.getInstance().on(event[0],event[1])
-        }
+
     }
 
     emit(event: SocketEvent): void {

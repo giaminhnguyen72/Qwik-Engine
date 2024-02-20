@@ -22,17 +22,15 @@ export class SocketServerManager implements System<Listenable>, EventSystem<Sock
     tag: string = "SOCKET";
     components: Map<number, Listenable>;
     emitters: Map<string, Emitter<EngineEvent>> = new Map()
-    unregistered: Map<string, Listener<EngineEvent>[]> = new Map()
     buffer: Map<number, EntityPacket> = new Map()
     listeners: Listener<EngineEvent>[] = []
-    events: string[]
     deleted: Listenable[] = []
     config: SocketServerConfig
     delayPassed: number = 0
     time: number = 0
     constructor(sceneManager: SceneManager, config: SocketServerConfig) {
         this.components = new Map<number, Listenable>()
-        this.events = []
+        
         
         this.config = config
         this.sceneManager = sceneManager

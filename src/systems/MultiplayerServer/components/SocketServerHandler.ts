@@ -20,7 +20,10 @@ type Test = {event: string,  callback: (data:any)=> void}
 export class SocketServer implements Listener<SocketEvent>, Emitter<SocketEvent> {
     static isInitialized = false
     static ServerHandler: SocketServer
+    // Room IDs to SocketServer instances
     static SocketServerMap: Map<string, SocketServer>
+    // Cliennt IDs to socket connections
+    static Lobby: Map<string, Socket>
     // maps socket id to events from players
     playerEvents: Map<string,  ReceiverEvent[]> = new Map() 
     //maps socket id to entity
@@ -37,7 +40,7 @@ export class SocketServer implements Listener<SocketEvent>, Emitter<SocketEvent>
     alive: boolean = true;
     engineTag: string = "SOCKET";
     componentId?: number | undefined;
-    system!: SocketServerManager;
+    system!: SocketServerManager
     type: EngineType
     
     entityGenerator: Map<string, () => Entity> = new Map()
@@ -60,6 +63,9 @@ export class SocketServer implements Listener<SocketEvent>, Emitter<SocketEvent>
         if (!SocketServer.SocketServerMap) {
             SocketServer.SocketServerMap = new Map()
         }
+        if (!SocketServer.Lobby) {
+            SocketServer.Lobby = new Map()
+        }
     }
     static  getInstance(type: EngineType,socketCallback: {[connectionString:string]:(socket:Socket) => void} = {}, events: {[connectionString:string]:{[socketString:string]:(data: any)=>void}} ={}) : SocketServer {
         if (SocketServer.ServerHandler ==undefined ||SocketServer.ServerHandler ==null ) {
@@ -69,11 +75,27 @@ export class SocketServer implements Listener<SocketEvent>, Emitter<SocketEvent>
             return SocketServer.ServerHandler
         }
     }
-    addPlayer(socket: string, entity: Entity) {
-            this.playerCharacter.set(socket, entity)
-            SocketServer.SocketServerMap.set(socket, this)
-            let scene = this.system.sceneManager.getCurrentScene()
-            scene.addEntity(entity)
+    static removeRoom(roomID: string) {
+        SocketServer.SocketServerMap.delete(roomID)
+    }
+    static addPlayerToRoom(playerSocket: Socket, roomID: string) {
+        let player = SocketServer.Lobby.get(playerSocket.id)
+        let room = SocketServer.SocketServerMap.get(roomID)
+
+        if (player && room) {
+            SocketServer.Lobby.delete(playerSocket.id)
+
+            room.addPlayer(player)
+        } else {
+            
+        }
+    }
+    addPlayer(player: Socket) {
+        let SocketHandler = this.events.get("connection")
+        if (SocketHandler) {
+            this.applySocketConnection(player, SocketHandler)
+        }
+        
         
     }
     removePlayer(socket: string) {
@@ -109,67 +131,35 @@ export class SocketServer implements Listener<SocketEvent>, Emitter<SocketEvent>
         console.log("Socket Server initializing")
         system.registerEmitter(this)
         system.registerListener(this)
-
+        SocketServer.SocketServerMap.set(this.system.roomID, this)
         if (!SocketServer.isInitialized) {
             console.log("Socket server is " + SocketServer.isInitialized)
 
-
+            SocketServerManager.socket.on("connection", (socket: Socket) => {
+                // Add to lobby to look for players
+                SocketServer.Lobby.set(socket.id, socket)
+                // Remove from lobby if disconnected before added to correct Room
+                socket.on('disconnect', () => {
+                    SocketServer.Lobby.delete(socket.id)
+                })
+            })
+            // allows you to manipulate the socket connection directly
             for (let [connectionString, callback] of this.socketCallback) {
                 SocketServerManager.socket.on(connectionString, callback)
             }
-          
-            for (let [connectionString, v] of this.events) {
+            // allows you to send and receive events with out caring about the socket connection -
+            // for (let [connectionString, v] of this.events) {
                 
-                SocketServerManager.socket.on(connectionString, (socket:Socket) => {
-                    if (connectionString == "connection") {
-                        SocketServer.SocketServerMap.set(socket.id, this)
-                    }
-                    let playerSocket  = SocketServer.SocketServerMap.get(socket.id)
-                    if (!playerSocket) {
-                        throw new Error("Socket not found")
-                    }
-                    let events = playerSocket.playerEvents.get(socket.id)
-                    if (!events) {
-                        events = []
-
-                        playerSocket.playerEvents.set(socket.id, events)
-                    }
-                    for (let [socketString, func] of v) {
-                        playerSocket.eventsMap.set(socketString, func)
-
-                        socket.on(socketString, (data: any) => {
-                            //this.listenQueue.set()
-                            let playerSocket  = SocketServer.SocketServerMap.get(socket.id)
-                            if (!playerSocket) {
-                                throw new Error("Socket not found")
-                            }
-                            let playerEvents = playerSocket.playerEvents.get(socket.id)
-                            if (!playerEvents) {
-                                playerEvents = [] 
-                                playerSocket.playerEvents.set(socket.id, playerEvents)
-                            }
-                            if (!this.listenerLock)  {
-                                console.log("Adding player event")
-                                playerEvents.push({
-                                    socketId: socket.id,
-                                    event: socketString,
-                                    data: data
-                                })
-                            }
-                            
-                        })
-                    }
-                })
-            }
+            //     SocketServerManager.socket.on(connectionString, (socket:Socket) => {
+            //         this.applySocketConnection(socket, v)
+            //     })
+            // }
 
          
             SocketServer.isInitialized = true
         }
+         
         
-        
-    }
-    addSocketCallback(connectionString: string,callback: (socket:Socket) => void) {
-        SocketServerManager.socket.on(connectionString, callback)
     }
 
     
@@ -182,6 +172,44 @@ export class SocketServer implements Listener<SocketEvent>, Emitter<SocketEvent>
     }
     removeListener(id: number): void {
         
+    }
+    applySocketConnection(socket: Socket, v: Map<string, (r: ReceiverEvent) => void>) {
+
+        let playerSocket: SocketServer  = this
+        if (!playerSocket) {
+            throw new Error("Socket not found")
+        }
+        let events = playerSocket.playerEvents.get(socket.id)
+        if (!events) {
+            events = []
+
+            playerSocket.playerEvents.set(socket.id, events)
+        }
+        for (let [socketString, func] of v) {
+            playerSocket.eventsMap.set(socketString, func)
+
+            socket.on(socketString, (data: any) => {
+                //this.listenQueue.set()
+                let playerSocket  = this
+                if (!playerSocket) {
+                    throw new Error("Socket not found")
+                }
+                let playerEvents = playerSocket.playerEvents.get(socket.id)
+                if (!playerEvents) {
+                    playerEvents = [] 
+                    playerSocket.playerEvents.set(socket.id, playerEvents)
+                }
+                if (!this.listenerLock)  {
+                    console.log("Adding player event")
+                    playerEvents.push({
+                        socketId: socket.id,
+                        event: socketString,
+                        data: data
+                    })
+                }
+                
+            })
+        }
     }
     getListeners() {
         return [this]
@@ -206,11 +234,13 @@ export class SocketServer implements Listener<SocketEvent>, Emitter<SocketEvent>
     }
     update(dt: number, ctx?: CanvasRenderingContext2D | undefined): void {
         //console.log("Server Hndler is updating")
+
         for (let i = this.emissionQueue.length - 1; i >= 0; i--) {
             this.emit(this.emissionQueue[i])
             this.emissionQueue.pop()
         }
         //Listeners portion
+        // This listens to any events coming from clients
         this.listenerLock = true
         for (let [socket, events] of this.playerEvents) {
             for (let i = events.length - 1; i >= 0; i--) {

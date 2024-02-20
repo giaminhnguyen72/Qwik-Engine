@@ -22,9 +22,7 @@ import { Rendering3d } from "./RenderingStrategy/Rendering3d.js"
       const width  = Math.floor( canvas.clientWidth  * pixelRatio );
       const height = Math.floor( canvas.clientHeight * pixelRatio );
       const needResize = canvas.width !== width || canvas.height !== height;
-      if (needResize) {
-        renderer.setSize(width, height, false);
-      }
+      renderer.setSize(window.innerWidth, window.innerHeight);
       return needResize;
     }
 export class GraphicsEngine implements System<Renderable>{
