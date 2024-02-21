@@ -4,12 +4,14 @@ import { Engine } from "../../../core/engine.js";
 import { SceneManager } from "../../../core/managers/SceneManager.js";
 import { SocketManager } from "../SocketManager.js";
 import { Scene, Stage } from "../../../core/scene.js";
-import { Component, Emitter, EngineEvent, Listener } from "../../../types/components.js";
+import { Component, Emitter, EngineEvent, Listener, SocketListener } from "../../../types/components.js";
 import { Entity, EntityPacket } from "../../../types/Entity.js";
 import { EventSystem, System } from "../../../types/system.js";
+import { MultiplayerSyncronizer } from "./Syncronizer.js";
 
 interface SocketEvent extends EngineEvent{
-
+    event: string,
+    data: any
 }
 export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent> {
 
@@ -17,7 +19,7 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
     listenQueue: Map<string, SocketEvent>= new Map()
     listenerLock: boolean = false
     socketMap: Map<string, (data:any)=> void>
-
+    listeners: Map<string, Listener<SocketEvent>> = new Map()
     events: Map<string, (data: any) => void>;
     //{[key:string]:{[event:string]:(click: SocketEvent)=>void}}
     stage: Stage
@@ -27,6 +29,7 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
     engineTag: string = "SOCKET";
     componentId?: number | undefined;
     system!: System<Component>;
+    //TODO Implement Snapshots
     snapShots: EntityPacket[] = [] 
     socketConfig: {engineType: EngineType, entityGeneratorMap?: Map<string,() => Entity>}
     entityGenerator: Map<string, () => Entity> = new Map()
@@ -97,6 +100,30 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
             }
 
         })
+
+        // this.events.set("update", (serverData: {timestamp: number, data: SocketListener<SocketEvent>[]}) => {
+        //     for (let listener of serverData.data) {
+        //         // Checks if entity exists or not by checking whether its component exists or not
+        //         let component = this.system.components.get(listener.componentId as number)
+        //         if (component) {
+        //             component.copy(listener)
+        //         } else {
+        //             let entityFactory = this.entityGenerator.get(listener.entityTag)
+        //             if (entityFactory) {
+        //                 let entity = entityFactory()
+        //                 if (listener.index >= 0 && listener.index < entity.components.length ) {
+        //                     entity.components[listener.index].copy(listener)
+        //                     this.stage.addServerEntity(entity)
+        //                 }
+                        
+        //             }
+        //         }
+
+        //     }
+        // })
+
+
+
         this.events.set("update", (serverData: {timestamp: number, data: EntityPacket[]}) => {
             let scene = this.stage
             
@@ -206,6 +233,7 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
     update(dt: number, ctx?: CanvasRenderingContext2D | undefined): void {
         this.time += dt
         for (let i = this.emissionQueue.length - 1; i >= 0; i--) {
+
             this.emit(this.emissionQueue[i])
             this.emissionQueue.pop()
         }
@@ -221,9 +249,15 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
                 func(i[1].data)
 
 
+
             } else {
                 throw new Error()
             }
+            let listener = this.listeners.get(i[0])
+            if (listener) {
+                
+            }
+            
             
         }
         this.listenQueue.clear()
@@ -238,7 +272,7 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
         this.socketConfig.engineType = component.socketConfig.engineType
     }
     getEventType(): string {
-        return "SocketServer"
+        return "Socket"
     }
     //Listener portion
 

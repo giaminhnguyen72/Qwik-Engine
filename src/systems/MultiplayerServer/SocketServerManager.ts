@@ -3,9 +3,9 @@ import { Server, Socket } from "socket.io";
 import { SocketServer } from "./components/SocketServerHandler.js";
 
 import { EventHandler } from "../events/EventHandler.js";
-import { Component, Emitter, EngineEvent, Listenable, Listener } from "../../types/components.js";
+import { Component, Emitter, EngineEvent, Listenable, Listener, SocketListener } from "../../types/components.js";
 import { Entity, EntityPacket } from "../../types/Entity.js";
-import { EventSystem, System } from "../../types/system.js";
+import { EventSystem, SocketEventSystem, System } from "../../types/system.js";
 import { EventConfig, SocketServerConfig } from "../../core/config.js";
 import { Engine } from "../../core/engine.js";
 import { Scene } from "../../core/scene.js";
@@ -15,7 +15,7 @@ interface SocketEvent extends EngineEvent{
     key: string
 }
 
-export class SocketServerManager implements System<Listenable>, EventSystem<SocketEvent> {
+export class SocketServerManager implements System<Listenable>, SocketEventSystem<SocketEvent> {
     static socket: Server
     roomID: string
     sceneManager: SceneManager
@@ -26,7 +26,6 @@ export class SocketServerManager implements System<Listenable>, EventSystem<Sock
     listeners: Listener<EngineEvent>[] = []
     deleted: Listenable[] = []
     config: SocketServerConfig
-    delayPassed: number = 0
     time: number = 0
     constructor(sceneManager: SceneManager, config: SocketServerConfig) {
         this.components = new Map<number, Listenable>()
@@ -85,7 +84,7 @@ export class SocketServerManager implements System<Listenable>, EventSystem<Sock
             
        }
     }
-    registerListener(component: Listener<EngineEvent>): void {
+    registerListener(component: SocketListener<EngineEvent>): void {
         console.log("A listener has been registered")
         let emitter = this.emitters.get(component.getEventType())
         if (emitter) {
@@ -122,79 +121,9 @@ export class SocketServerManager implements System<Listenable>, EventSystem<Sock
 
     
         //console.log("RoomId is " + this.roomID)
-        if (this.roomID) {
+        
             //console.log("updating room" + this.roomID)
-            let entities: EntityPacket[] = []
 
-            let ent =  this.sceneManager.getCurrentScene().entities
-            
-            //console.log(ent.size + " entities have been sent")
-            // We loop through each entity within the scene
-            if (this.config.buffer <= 0 ) {
-                for (let e of  ent){
-                    if (this.config.buffer <= 0){
-                        // If there is no buffer we send the current objects
-                        let scene = e[1].scene as Scene
-                        entities.push({
-                            components: e[1].components,
-                            id: e[1].id as number,
-                            sceneId: scene.name,
-                            entityClass: e[1].className
-                        })
-                    } 
-                //If there is a buffer 
-                } 
-            } else {
-                // We only send the data in the pass ie 100 ms has passed
-                if (this.time  >= this.config.buffer) {
-                    // we first send the the items in the buffered queue. This means data in the past
-                    for (let e of  this.buffer){
-                    
-                        // If there is no buffer we send the current objects
-                        
-                        entities.push(e[1])
-                        
-                     
-                    } 
-                     // we then update the queue with the new data from the scene
-                     // buffer must contain new data due to components being references and stuff like that 
-                    let scene = this.sceneManager.getCurrentScene()
-                    for (let [id, entityObj] of scene.entities) {
-    
-                        let bufferedItem = this.buffer.get(id)
-                        // Entity is already in buffer, copy the data over from entities to buffer
-                        // We only need to copy the components
-                        if  (bufferedItem) {
-                            for (let i =0;  i < entityObj.components.length; i++) {
-                                bufferedItem.components[i].copy(entityObj.components[i])
-                            }
-                        } else {
-                            //otherwise, create the new entity and copy the data over
-                            let bufferedItem = entityObj.clone()
-                            for (let i =0;  i < entityObj.components.length; i++) {
-                                bufferedItem.components[i].copy(entityObj.components[i])
-                            }
-                            // the add the packet to the the buffer
-                            this.buffer.set(id, {
-                                components: bufferedItem.components,
-                                id: id,
-                                sceneId: scene.name,
-                                entityClass: entityObj.className
-                            })
-                            
-                        }
-                    }
-                }
-                
-
-               
-
-                //
-            }
-            
-            let packet = {timestamp: this.time,data:entities}
-
-            SocketServerManager.socket.to(this.roomID).emit("update", packet)
 
             while (this.deleted.length > 0) {
                 let comp = this.deleted.pop()
@@ -214,7 +143,7 @@ export class SocketServerManager implements System<Listenable>, EventSystem<Sock
                     
                 }
             }
-        }
+        
         
         
     }

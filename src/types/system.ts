@@ -1,5 +1,5 @@
 import { SceneManager } from "../core/managers/SceneManager.js"
-import { Component, Emitter, EngineEvent, Listenable, Listener } from "./components.js"
+import { Component, Emitter, EngineEvent, Listenable, Listener, SocketListener } from "./components.js"
 
 
 export interface System<T extends Component> {
@@ -15,6 +15,12 @@ export interface System<T extends Component> {
 export interface EventSystem<T extends EngineEvent> extends System<Listenable> {
 
     registerListener(component: Listenable): void
+    registerEmitter(component: Emitter<T>): void
+    getConfig(): {}
+}
+export interface SocketEventSystem<T extends EngineEvent> extends System<Listenable> {
+
+    registerListener(component: SocketListener<T>): void
     registerEmitter(component: Emitter<T>): void
     getConfig(): {}
 }

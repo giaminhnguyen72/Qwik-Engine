@@ -59,7 +59,6 @@ export interface Renderable extends Component {
 }
 export interface Listenable extends Component{
 
-    eventMap?: Map<string, () => void>
     initialize(system: System<Component>): void
     getEventType(): string
     update(dt: number, ctx?: CanvasRenderingContext2D): void
@@ -67,8 +66,15 @@ export interface Listenable extends Component{
 export interface Listener<T extends EngineEvent> extends Listenable {
     initialize(system: EventSystem<T>): void
     execute(event: T): void
-
     getEvents(): Map<string, (evnt: T)=> void>
+}
+export interface SocketListener<T extends EngineEvent> extends Listenable {
+    entityTag: string
+    index: number
+    initialize(system: EventSystem<T>): void
+    execute(event: T): void
+    getEvents(): Map<string, (evnt: T)=> void>
+    clone(): SocketListener<T>
 }
 export interface Emitter<T extends EngineEvent> extends Listenable {
     
