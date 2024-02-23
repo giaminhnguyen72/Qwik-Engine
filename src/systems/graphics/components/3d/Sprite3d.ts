@@ -46,7 +46,7 @@ export class Sprite3d implements Component, Renderable {
 
     }
     unmount(): void {
-        console.log("Unmounting sprite")
+
         
         this.system.sceneGraph.remove(this.component)
     }
@@ -102,8 +102,7 @@ export class Sprite3d implements Component, Renderable {
 
     update(dt: number): void {
         if (this.loaded) {
-            console.log("Position X is " + this.component.position.x)
-            console.log("Position Y is " + this.component.position.y)
+
             this.component.position.x = this.pos.x
             this.component.position.y = this.pos.y
             this.component.position.z = this.pos.z
@@ -114,7 +113,7 @@ export class Sprite3d implements Component, Renderable {
     initialize(graphics:GraphicsEngine) {
         let loader =  new TextureLoader()
         let loaded = loader.load(this.src, (data) => {
-            console.log("picture has been loaded " + this.src)
+
             this.material = new SpriteMaterial({map: data})
             data.center.set(0.5,0.5)
             this.component = new Sprite(this.material)

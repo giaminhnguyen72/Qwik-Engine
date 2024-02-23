@@ -107,7 +107,7 @@ export class OrthographicCamera3d implements Renderable {
     }
     renderCamera(array: Renderable[]): void {
         if (this.visible) {
-            console.log("rendering orthographic")
+
             
             this.system.renderer.render(this.system.sceneGraph, this.component)
         //console.log("Camera is rendered " + items.length + "elements")

@@ -11,8 +11,8 @@ import { Engine } from "../../core/engine.js";
 import { Scene } from "../../core/scene.js";
 import { SceneManager } from "../../core/managers/SceneManager.js";
 interface SocketEvent extends EngineEvent{
-    eventName: string
-    key: string
+    event: string
+    data: string
 }
 
 export class SocketServerManager implements System<Listenable>, SocketEventSystem<SocketEvent> {
@@ -22,7 +22,7 @@ export class SocketServerManager implements System<Listenable>, SocketEventSyste
     tag: string = "SOCKET";
     components: Map<number, Listenable>;
     emitters: Map<string, Emitter<EngineEvent>> = new Map()
-    buffer: Map<number, EntityPacket> = new Map()
+    buffer: Map<number, SocketListener<SocketEvent>> = new Map()
     listeners: Listener<EngineEvent>[] = []
     deleted: Listenable[] = []
     config: SocketServerConfig

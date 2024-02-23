@@ -1,6 +1,8 @@
-import { EventSystem, System } from "../../../../../engine/src/types/system.js";
+import { EventSystem, SocketEventSystem, System } from "../../../../../engine/src/types/system.js";
 import { Component, EngineEvent, Listener } from "../../../../../engine/src/types/components.js";
 import { Entity } from "../../../../../engine/src/types/Entity.js";
+import { Engine } from "../../../../../engine/src/core/engine.js";
+import { EngineType } from "../../../../../engine/src/constants/engineType.js";
 interface SocketEvent extends EngineEvent{
     event: string,
     data: {
@@ -10,25 +12,29 @@ interface SocketEvent extends EngineEvent{
 }
 // TODO: make the Syncronizer on the Server side emit Only necessary data
 
- export class MultiplayerSyncronizer<T extends {new(...args: any[]): Entity}, Data> implements Listener<SocketEvent> {
+ export class MultiplayerSyncronizer<T extends Entity, Data> implements Listener<SocketEvent> {
     entity?: number | undefined;
     visible: boolean = true;
     alive: boolean = true;
     engineTag: string = "SOCKET";
     componentId?: number | undefined;
-    system!: EventSystem<SocketEvent>
+    system!: SocketEventSystem<SocketEvent>
     entityTag: string
     // Use in client to copy data to entity
-    updateFunc: (data: MultiplayerSyncronizer<T, Data>) => void
+    copyFunc: (data: Data) => void
+    // Use in server to decide which data to send
     returnData: () => Data
+    // update item mostly for interpolation
+    updateFunc?: (dt: number) => void
     index: number = -1
     currEntity:Entity
-    constructor(entity: Entity, updateFunc: (data: MultiplayerSyncronizer<T, Data>) => void, returnData: () => Data ) {
+    constructor(entity: Entity, copyFunc: (data: Data) => void, returnData: () => Data, updateFunc?: (dt: number) => void ) {
         this.entityTag = entity.className
         //Only use in client
         this.currEntity = entity
-        this.updateFunc = updateFunc
+        this.copyFunc = copyFunc
         this.returnData = returnData
+        this.updateFunc = updateFunc
     }
     initialize(system: EventSystem<SocketEvent>): void {
         this.system = system
@@ -45,10 +51,18 @@ interface SocketEvent extends EngineEvent{
         }
 
     }
-    //Used for buffers serverside
+    //Used for lag compnesation probably
     clone() {
-        let entity = new MultiplayerSyncronizer<T, Data>(this.currEntity, this.updateFunc, this.returnData)
-    
+        let entity = new MultiplayerSyncronizer<T, Data>(this.currEntity, this.copyFunc, this.returnData)
+        entity.componentId = this.componentId
+        entity.entity = this.entity
+        entity.index = this.index
+        entity.visible = this.visible
+        entity.alive = this.alive
+        entity.engineTag = this.engineTag
+        entity.system = this.system
+        entity.currEntity = this.currEntity
+        entity.engineTag = this.entityTag
         return entity
 
     }
@@ -66,18 +80,26 @@ interface SocketEvent extends EngineEvent{
         return "Socket"
     }
     update(dt: number, ctx?: CanvasRenderingContext2D | undefined): void {
-        throw new Error("Method not implemented.");
+        if (this.updateFunc) {
+            this.updateFunc(dt)
+        }
     }
     //Copies Data over to component
 
     copy(component: MultiplayerSyncronizer<T, Data>): void {
-        this.updateFunc(component)
+        if (Engine.engineConfig.engineType == EngineType.SOCKETSERVER) {
+
+        } else if (Engine.engineConfig.engineType == EngineType.SOCKETCLIENT) {
+            let c = component as any
+            this.copyFunc(c.data)
+        }
+        
     }
     toJSON() {
         return {
             componentId: this.componentId,
             data: this.returnData(),
-            entityTag: this.engineTag,
+            entityTag: this.entityTag,
             entity: this.entity,
             index: this.index
         }

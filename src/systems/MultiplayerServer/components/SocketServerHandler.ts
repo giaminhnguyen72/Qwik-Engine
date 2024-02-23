@@ -6,6 +6,7 @@ import { EventSystem, SocketEventSystem, System } from "../../../types/system.js
 import { Entity, EntityPacket } from "../../../types/Entity.js";
 import { Socket } from "socket.io";
 import { Scene } from "../../../../../engine/src/core/scene.js";
+import { Engine } from "../../../../../engine/src/core/engine.js";
 interface SocketEvent extends EngineEvent {
 
     event: string
@@ -48,6 +49,7 @@ export class SocketServer implements Emitter<SocketEvent> {
     socketCallback: Map<string, (socket: Socket) => void> = new Map()
     entityTag: string = ""
     index: number = -1
+    time: number = 0
     constructor(socketCallback: {[connectionString:string]:(socket:Socket) => void}, events: {[connectionString:string]:{[socketString:string]:(data: any)=>void}}, type: EngineType) {
         
         this.type = type
@@ -68,6 +70,18 @@ export class SocketServer implements Emitter<SocketEvent> {
         if (!SocketServer.Lobby) {
             SocketServer.Lobby = new Map()
         }
+    }
+    static GetLobby() {
+        if (!SocketServer.Lobby) {
+            SocketServer.Lobby = new Map()
+        }
+        return SocketServer.Lobby
+    }
+    static GetSocketServerMap() {
+        if (!SocketServer.SocketServerMap) {
+            SocketServer.SocketServerMap = new Map()
+        }
+        return SocketServer.SocketServerMap
     }
     static  getInstance(type: EngineType,socketCallback: {[connectionString:string]:(socket:Socket) => void} = {}, events: {[connectionString:string]:{[socketString:string]:(data: any)=>void}} ={}) : SocketServer {
         if (SocketServer.ServerHandler ==undefined ||SocketServer.ServerHandler ==null ) {
@@ -233,14 +247,14 @@ export class SocketServer implements Emitter<SocketEvent> {
     
     //Emitter
     addListener(component: SocketListener<SocketEvent>): void {
-        this.listeners.set(this.componentId as number, component)
+        this.listeners.set(component.componentId as number, component)
     }
     removeListener(id: number): void {
         this.listeners.delete(id)
     }
     update(dt: number, ctx?: CanvasRenderingContext2D | undefined): void {
         //console.log("Server Hndler is updating")
-
+        this.time += dt
         for (let i = this.emissionQueue.length - 1; i >= 0; i--) {
             this.emit(this.emissionQueue[i])
             this.emissionQueue.pop()
@@ -253,7 +267,7 @@ export class SocketServer implements Emitter<SocketEvent> {
                 let e = events[i]
                 let func = this.eventsMap.get(e.event) 
                 if (func) {
-                    console.log("This event has been called: " + e.event)
+
                     func(e)
                 } else {
                     //throw new Error()
@@ -265,40 +279,43 @@ export class SocketServer implements Emitter<SocketEvent> {
             
         }
         this.listenerLock = false
-        // let newpacket = {
-        //     event: "update",
-        //     data: {
-        //         timestamp: this.system.time,
-        //         data: []
-        //     }
-        // }
-        //     if (this.system.config.buffer <= 0 ) {       
-        //         this.listenerLock = false
+        let newpacket:SocketEvent = {
+            event: "update",
+            data: {
+                timestamp: this.time,
+                data: []
+            }
+        }
+        //added true because buffers are not done serverside unless in cases of lag compensation
+            if (true || this.system.config.buffer <= 0 ) {       
+                this.listenerLock = false
 
                 
-        //         for (let [id, component] of this.listeners) {
-        //             component.execute(newpacket)
-        //         }
-        //         this.emit(newpacket)
-        //     } else {
-        //         if ((this.system.config.buffer <= this.system.time)) {
-        //             let buffer: Map<number, SocketListener<SocketEvent>> = new Map()
-        //             for (let listener of buffer) {
-        //                 listener[1].execute(newpacket)
-        //             }
-        //             for (let [id, component] of this.listeners) {
-        //                 let bufferedItem = buffer.get(id)
-        //                 if (bufferedItem) {
-        //                     bufferedItem.copy(component)
-        //                 } else {
-        //                     let bufferedItem = component.clone()
-        //                     bufferedItem.copy(component)
-        //                     buffer.set(id, bufferedItem)
-        //                 }
-        //             }
-        //         }
-        //         this.emit(newpacket)
-        //     }
+                for (let [id, component] of this.listeners) {
+                    component.execute(newpacket)
+
+                }
+                this.emit(newpacket)
+            } else {
+                // if ((this.system.config.buffer <= this.system.time)) {
+                //     let buffer = this.system.buffer
+                //     for (let listener of buffer) {
+                //         listener[1].execute(newpacket)
+                //     }
+                //     for (let [id, component] of this.listeners) {
+                //         let bufferedItem = buffer.get(id)
+                //         if (bufferedItem) {
+                //             bufferedItem.copy(component)
+                //         } else {
+                //             let bufferedItem = component.clone()
+                            
+                //             buffer.set(id, bufferedItem)
+                //         }
+                //     }
+                // }
+                // this.emit(newpacket)
+            }
+
         
         // 
         //
@@ -321,77 +338,77 @@ export class SocketServer implements Emitter<SocketEvent> {
 
 
 
-        let entities: EntityPacket[] = []
+        // let entities: EntityPacket[] = []
 
-        let ent =  this.system.sceneManager.getCurrentScene().entities
+        // let ent =  this.system.sceneManager.getCurrentScene().entities
         
-        //console.log(ent.size + " entities have been sent")
-        // We loop through each entity within the scene
-        if (this.system.config.buffer <= 0 ) {
-            for (let e of  ent){
-                if (this.system.config.buffer <= 0){
-                    // If there is no buffer we send the current objects
-                    let scene = e[1].scene as Scene
-                    entities.push({
-                        components: e[1].components,
-                        id: e[1].id as number,
-                        sceneId: scene.name,
-                        entityClass: e[1].className
-                    })
-                } 
-            //If there is a buffer 
-            } 
-        } else {
-            // We only send the data in the pass ie 100 ms has passed
-            if (this.system.time  >= this.system.config.buffer) {
-                // we first send the the items in the buffered queue. This means data in the past
-                for (let e of  this.system.buffer){
+        // //console.log(ent.size + " entities have been sent")
+        // // We loop through each entity within the scene
+        // if (this.system.config.buffer <= 0 ) {
+        //     for (let e of  ent){
+        //         if (this.system.config.buffer <= 0){
+        //             // If there is no buffer we send the current objects
+        //             let scene = e[1].scene as Scene
+        //             entities.push({
+        //                 components: e[1].components,
+        //                 id: e[1].id as number,
+        //                 sceneId: scene.name,
+        //                 entityClass: e[1].className
+        //             })
+        //         } 
+        //     //If there is a buffer 
+        //     } 
+        // } else {
+        //     // We only send the data in the pass ie 100 ms has passed
+        //     if (this.system.time  >= this.system.config.buffer) {
+        //         // we first send the the items in the buffered queue. This means data in the past
+        //         for (let e of  this.system.buffer){
                 
-                    // If there is no buffer we send the current objects
+        //             // If there is no buffer we send the current objects
                     
-                    entities.push(e[1])
+        //             entities.push(e[1])
                     
                  
-                } 
-                 // we then update the queue with the new data from the scene
-                 // buffer must contain new data due to components being references and stuff like that 
-                let scene = this.system.sceneManager.getCurrentScene()
-                for (let [id, entityObj] of scene.entities) {
+        //         } 
+        //          // we then update the queue with the new data from the scene
+        //          // buffer must contain new data due to components being references and stuff like that 
+        //         let scene = this.system.sceneManager.getCurrentScene()
+        //         for (let [id, entityObj] of scene.entities) {
 
-                    let bufferedItem = this.system.buffer.get(id)
-                    // Entity is already in buffer, copy the data over from entities to buffer
-                    // We only need to copy the components
-                    if  (bufferedItem) {
-                        for (let i =0;  i < entityObj.components.length; i++) {
-                            bufferedItem.components[i].copy(entityObj.components[i])
-                        }
-                    } else {
-                        //otherwise, create the new entity and copy the data over
-                        let bufferedItem = entityObj.clone()
-                        for (let i =0;  i < entityObj.components.length; i++) {
-                            bufferedItem.components[i].copy(entityObj.components[i])
-                        }
-                        // the add the packet to the the buffer
-                        this.system.buffer.set(id, {
-                            components: bufferedItem.components,
-                            id: id,
-                            sceneId: scene.name,
-                            entityClass: entityObj.className
-                        })
+        //             let bufferedItem = this.system.buffer.get(id)
+        //             // Entity is already in buffer, copy the data over from entities to buffer
+        //             // We only need to copy the components
+        //             if  (bufferedItem) {
+        //                 for (let i =0;  i < entityObj.components.length; i++) {
+        //                     bufferedItem.components[i].copy(entityObj.components[i])
+        //                 }
+        //             } else {
+        //                 //otherwise, create the new entity and copy the data over
+        //                 let bufferedItem = entityObj.clone()
+        //                 for (let i =0;  i < entityObj.components.length; i++) {
+        //                     bufferedItem.components[i].copy(entityObj.components[i])
+        //                 }
+        //                 // the add the packet to the the buffer
+        //                 this.system.buffer.set(id, {
+        //                     components: bufferedItem.components,
+        //                     id: id,
+        //                     sceneId: scene.name,
+        //                     entityClass: entityObj.className
+        //                 })
                         
-                    }
-                }
-            }
+        //             }
+        //         }
+        //     }
             
 
            
 
-            //
-        }
+        //     //
+        // }
         
-        let packet = {timestamp: this.system.time,data:entities}
+        // let packet = {timestamp: this.system.time,data:entities}
 
-        SocketServerManager.socket.to(this.system.roomID).emit("update", packet)
+        // SocketServerManager.socket.to(this.system.roomID).emit("update", packet)
 
 
 
@@ -408,10 +425,10 @@ export class SocketServer implements Emitter<SocketEvent> {
         }
     }
     emit(event: SocketEvent): void {
-        console.log("Room id is " + this.system.roomID)
         SocketServerManager.socket.to(this.system.roomID).emit(event.event, event.data)
     }
     execute(event: SocketEvent): void {
+
         event.data.data.push(this.toJSON())
     }
     toJSON() {

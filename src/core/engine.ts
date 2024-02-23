@@ -20,7 +20,7 @@ export class Engine {
     running:boolean
     sceneManager: SceneManager
     systems: System<Component>[] = []
-    static time: number = 0
+    time: number = 0
     graphics?: GraphicsEngine
     serverTime = 0n;
     clientTime = 0
@@ -166,22 +166,19 @@ export class Engine {
                 
                 
                 let deltaTime = 0
-                this.update(deltaTime)
-                Engine.time += deltaTime 
+                this.time += deltaTime 
                 this.clientTime = timestamp
+                this.update(deltaTime)
+                
                 
             })
         } else {
             
-            setTimeout(() => {
+            if (this.running) {
+                this.serverTime = process.hrtime.bigint()
+                this.serverUpdate(0, dt)
                 
-                if (this.running) {
-                    this.serverUpdate(0, dt)
-                    this.serverTime = process.hrtime.bigint()
-                }
-                console.log("Timeout runout")
-
-            }, dt)
+            }
             
 
         }
@@ -202,17 +199,22 @@ export class Engine {
                     let currTime = timestamp
                     let deltaTime = currTime - this.clientTime
                     this.update(deltaTime)
-                    Engine.time += deltaTime 
+                    this.time += deltaTime 
                     this.clientTime = currTime
                     
                 })
+                
             } else {
+                this.sceneManager.currScene.update(dt)
+                for (let sys of this.systems) {
+                    sys.update(dt)
+                }
                 window.requestAnimationFrame((timestamp:number) => {
                 
                     let currTime = timestamp
                     let deltaTime = currTime - this.clientTime
                     this.update(deltaTime)
-                    Engine.time += deltaTime 
+                    this.time += deltaTime 
                     this.clientTime = currTime
                     
                 })
@@ -237,7 +239,8 @@ export class Engine {
                     let currTime = process.hrtime.bigint()
                     let realDelta =  Number(currTime - this.serverTime) / 1000000
                     this.serverUpdate(Number(realDelta), timeout)
-                    Engine.time += Number(realDelta)
+
+                    this.time += Number(realDelta)
                     this.serverTime = currTime
                     //console.log(Engine.time) 
                 }
@@ -245,13 +248,18 @@ export class Engine {
             }, timeout)
              
         } else {
+            this.sceneManager.currScene.update(dt)
+            
+            for (let sys of this.systems) {
+                sys.update(dt)
+            }
             setTimeout(() => { 
                 if (this.running) {
                     let currTime = process.hrtime.bigint()
                     let realDelta =  (currTime - this.serverTime) / 1000000n
                     this.serverUpdate(Number(realDelta), timeout)
-                    
-                    Engine.time += Number(realDelta)
+
+                    this.time += Number(realDelta)
                     this.serverTime = currTime
                      
                 }

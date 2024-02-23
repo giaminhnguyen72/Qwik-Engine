@@ -30,10 +30,11 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
     componentId?: number | undefined;
     system!: System<Component>;
     //TODO Implement Snapshots
-    snapShots: EntityPacket[] = [] 
+    snapShots: {timestamp: number, data: SocketListener<SocketEvent>[]}[] = [] 
     socketConfig: {engineType: EngineType, entityGeneratorMap?: Map<string,() => Entity>}
     entityGenerator: Map<string, () => Entity> = new Map()
     time: number= 0
+    initialized: boolean = false
     constructor(multiplayerStage: Stage, socketMap: {[key:string]:(data: any)=>void}, socketConfig: {engineType: EngineType, entityGeneratorMap?: Map<string,() => Entity>}) {
 
         this.stage = multiplayerStage
@@ -101,91 +102,101 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
 
         })
 
-        // this.events.set("update", (serverData: {timestamp: number, data: SocketListener<SocketEvent>[]}) => {
-        //     for (let listener of serverData.data) {
-        //         // Checks if entity exists or not by checking whether its component exists or not
-        //         let component = this.system.components.get(listener.componentId as number)
-        //         if (component) {
-        //             component.copy(listener)
-        //         } else {
-        //             let entityFactory = this.entityGenerator.get(listener.entityTag)
-        //             if (entityFactory) {
-        //                 let entity = entityFactory()
-        //                 if (listener.index >= 0 && listener.index < entity.components.length ) {
-        //                     entity.components[listener.index].copy(listener)
-        //                     this.stage.addServerEntity(entity)
-        //                 }
-                        
-        //             }
-        //         }
-
-        //     }
-        // })
-
-
-
-        this.events.set("update", (serverData: {timestamp: number, data: EntityPacket[]}) => {
-            let scene = this.stage
+        this.events.set("update", (serverData: {timestamp: number, data: SocketListener<SocketEvent>[]}) => {
+            if (!this.initialized) {
+                this.initialized = true
+                this.time = serverData.timestamp
+            }
             
+            for (let listener of serverData.data) {
+                // Checks if entity exists or not by checking whether its component exists or not
+                let component = this.system.components.get(listener.componentId as number)
+                if (component) {
 
-            if (scene){
-                // Loop through Entity packets
-                for (let entitySent of serverData.data) { 
-                    let getScene = scene
-                    if (getScene) {
-                        // Checks whether Entity exists or not 
-                        let queriedEntity = getScene.entities.get(entitySent.id)
-                        if (queriedEntity) {
-                            //if exists loop through all components and copy the components data from server 
-                            for (let i = 0; i < entitySent.components.length; i++) {
-                                // This retrieves the system from the hashmap and the queries the system for the component
-                                // Perhaps we should just update from the components of entities?
-                                queriedEntity.components[i].copy(entitySent.components[i])
-                                /**
-                                 * 
-                                 * let engine = this.stage.querySys(entitySent.components[i].engineTag)
-                                if (engine) {
-                                    let comp = engine.components.get(entitySent.components[i].componentId as number)
-                                    if (comp) {
-                                        comp.copy(entitySent.components[i])
-                                    } 
-                                } 
-                                 * 
-                                 * 
-                                 */
+                    component.copy(listener)
+                } else {
 
+                    let entityFactory = this.entityGenerator.get(listener.entityTag)
+                    if (entityFactory) {
+                        let entity = entityFactory()
 
-                                
-                                
-                            }
-                        } else {
-                                // IF entity is not found, this must mean it has just been created. Thus, we will allocate some memory for it.
-                                // We look for the appropriate Generator function in the Socket client to get our Entity
-                                // Generator functions are created through the entity generatormap or the addClass function
+                        if (listener.index >= 0 && listener.index < entity.components.length ) {
 
-                                let entityFactory = this.entityGenerator.get(entitySent.entityClass)
-                                if (entityFactory) {
-                                    // If exists, we add the entity by calling the generator function and copy the data in all the components over 
-                                    
-                                    let entity = entityFactory()
-                                    entity.id = entitySent.id
-                                    entity.scene = getScene as Scene
-                                    for (let j = 0; j < entity.components.length; j++) {
-                                        entity.components[j].copy(entitySent.components[j])
-                                    }
-                                    this.stage.addServerEntity(entity)
-                                } 
-                        }                        
-                    } else {
-                        throw new Error("Scene not found")
+                            entity.id = listener.entity
+                            entity.components[listener.index].copy(listener)
+                            this.stage.addServerEntity(entity)
+                        }
+                        
                     }
                 }
 
-        }
+            }
         })
+
+
+
+        // this.events.set("update", (serverData: {timestamp: number, data: EntityPacket[]}) => {
+        //     let scene = this.stage
+            
+
+        //     if (scene){
+        //         // Loop through Entity packets
+        //         for (let entitySent of serverData.data) { 
+        //             let getScene = scene
+        //             if (getScene) {
+        //                 // Checks whether Entity exists or not 
+        //                 let queriedEntity = getScene.entities.get(entitySent.id)
+        //                 if (queriedEntity) {
+        //                     //if exists loop through all components and copy the components data from server 
+        //                     for (let i = 0; i < entitySent.components.length; i++) {
+        //                         // This retrieves the system from the hashmap and the queries the system for the component
+        //                         // Perhaps we should just update from the components of entities?
+        //                         queriedEntity.components[i].copy(entitySent.components[i])
+        //                         /**
+        //                          * 
+        //                          * let engine = this.stage.querySys(entitySent.components[i].engineTag)
+        //                         if (engine) {
+        //                             let comp = engine.components.get(entitySent.components[i].componentId as number)
+        //                             if (comp) {
+        //                                 comp.copy(entitySent.components[i])
+        //                             } 
+        //                         } 
+        //                          * 
+        //                          * 
+        //                          */
+
+
+                                
+                                
+        //                     }
+        //                 } else {
+        //                         // IF entity is not found, this must mean it has just been created. Thus, we will allocate some memory for it.
+        //                         // We look for the appropriate Generator function in the Socket client to get our Entity
+        //                         // Generator functions are created through the entity generatormap or the addClass function
+
+        //                         let entityFactory = this.entityGenerator.get(entitySent.entityClass)
+        //                         if (entityFactory) {
+        //                             // If exists, we add the entity by calling the generator function and copy the data in all the components over 
+                                    
+        //                             let entity = entityFactory()
+        //                             entity.id = entitySent.id
+        //                             entity.scene = getScene as Scene
+        //                             for (let j = 0; j < entity.components.length; j++) {
+        //                                 entity.components[j].copy(entitySent.components[j])
+        //                             }
+        //                             this.stage.addServerEntity(entity)
+        //                         } 
+        //                 }                        
+        //             } else {
+        //                 throw new Error("Scene not found")
+        //             }
+        //         }
+
+        // }
+        // })
         SocketManager.getInstance().on("update", (serverData: {timestamp: number, entities: EntityPacket[], time: number}) => {
             let func = this.events.get("update")
-                
+
                 if (!this.listenerLock) {
 
                     this.listenQueue.set("update", {

@@ -1,4 +1,4 @@
-import { GRAPHICS_TAG } from "../../../../constants/componentType.js";
+
 
 import { GraphicsEngine } from "../../GraphicEngine.js";
 
@@ -20,6 +20,7 @@ import { System } from "../../../../../../engine/src/types/system.js";
 import { TextureLoader } from "three/src/loaders/TextureLoader.js";
 import { SpriteMaterial } from "three/src/materials/SpriteMaterial.js";
 import { Sprite } from "three";
+import { GRAPHICS_TAG } from "../../../../../../engine/src/constants/componentType.js";
 
 export class TimedSpriteSheet3d implements Renderable {
     entity?: number | undefined;
@@ -159,7 +160,7 @@ export class TimedSpriteSheet3d implements Renderable {
             this.time = this.time % this.delay
             if (this.loaded) {
                 if (this.material.map) {
-                    console.log("set offset")
+
                     this.material.map.offset.x = this.column / this.maxColumn
                     let state = 0;
                     

@@ -110,7 +110,7 @@ export class MultiplayerStage implements Scene, Entity {
     }
   
     addEntity( entity: Entity): Entity {
-        
+        console.log("Entity added")
         this.addedEntities.push(entity)
         return entity
         
