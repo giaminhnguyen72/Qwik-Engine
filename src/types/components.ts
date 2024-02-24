@@ -71,10 +71,12 @@ export interface Listener<T extends EngineEvent> extends Listenable {
 export interface SocketListener<T extends EngineEvent> extends Listenable {
     entityTag: string
     index: number
+    time:number
     initialize(system: EventSystem<T>): void
     execute(event: T): void
     getEvents(): Map<string, (evnt: T)=> void>
     clone(): SocketListener<T>
+    interpolateData(timestamp: number, data: SocketListener<T>): void
 }
 export interface Emitter<T extends EngineEvent> extends Listenable {
     

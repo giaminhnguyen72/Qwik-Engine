@@ -6,20 +6,20 @@ import { SocketManager } from "../SocketManager.js";
 import { Scene, Stage } from "../../../core/scene.js";
 import { Component, Emitter, EngineEvent, Listener, SocketListener } from "../../../types/components.js";
 import { Entity, EntityPacket } from "../../../types/Entity.js";
-import { EventSystem, System } from "../../../types/system.js";
+import { EventSystem, SocketEventSystem, System } from "../../../types/system.js";
 import { MultiplayerSyncronizer } from "./Syncronizer.js";
 
 interface SocketEvent extends EngineEvent{
     event: string,
     data: any
 }
-export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent> {
+export class SocketClient implements Emitter<SocketEvent>, SocketListener<SocketEvent> {
 
     emissionQueue: SocketEvent[] = []
     listenQueue: Map<string, SocketEvent>= new Map()
     listenerLock: boolean = false
     socketMap: Map<string, (data:any)=> void>
-    listeners: Map<string, Listener<SocketEvent>> = new Map()
+    listeners: Map<number, SocketListener<SocketEvent>> = new Map()
     events: Map<string, (data: any) => void>;
     //{[key:string]:{[event:string]:(click: SocketEvent)=>void}}
     stage: Stage
@@ -28,9 +28,9 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
     alive: boolean = true;
     engineTag: string = "SOCKET";
     componentId?: number | undefined;
-    system!: System<Component>;
+    system!: SocketEventSystem<SocketEvent>
     //TODO Implement Snapshots
-    snapShots: {timestamp: number, data: SocketListener<SocketEvent>[]}[] = [] 
+    snapshots: {timestamp: number, data: SocketListener<SocketEvent>[]}[] = [] 
     socketConfig: {engineType: EngineType, entityGeneratorMap?: Map<string,() => Entity>}
     entityGenerator: Map<string, () => Entity> = new Map()
     time: number= 0
@@ -50,6 +50,14 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
             this.socketMap.set(k, v)
         })
 
+    }
+    interpolateData(timestamp: number, data: any): void {
+
+    }
+    entityTag: string = "SOCKET";
+    index: number = 0 ;
+    clone(): SocketListener<SocketEvent> {
+        return this
     }
     addEvent(event:string, callback: (data: any) => void) {
         this.socketMap.set(event, callback)
@@ -103,34 +111,27 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
         })
 
         this.events.set("update", (serverData: {timestamp: number, data: SocketListener<SocketEvent>[]}) => {
+            // Sync client time with server rime on start up
             if (!this.initialized) {
                 this.initialized = true
                 this.time = serverData.timestamp
             }
-            
-            for (let listener of serverData.data) {
-                // Checks if entity exists or not by checking whether its component exists or not
-                let component = this.system.components.get(listener.componentId as number)
-                if (component) {
-
-                    component.copy(listener)
+            // Add snapshots to data and makes sure they are sorted in order
+            this.snapshots.push(serverData)
+            let idx = this.snapshots.length - 1
+            while (idx > 0) {
+                if (this.snapshots[idx].timestamp < this.snapshots[idx - 1].timestamp) {
+                    let temp = this.snapshots[idx - 1]
+                    this.snapshots[idx-1] = this.snapshots[idx]
+                    this.snapshots[idx] = temp
                 } else {
-
-                    let entityFactory = this.entityGenerator.get(listener.entityTag)
-                    if (entityFactory) {
-                        let entity = entityFactory()
-
-                        if (listener.index >= 0 && listener.index < entity.components.length ) {
-
-                            entity.id = listener.entity
-                            entity.components[listener.index].copy(listener)
-                            this.stage.addServerEntity(entity)
-                        }
-                        
-                    }
+                    break
                 }
-
+                idx--
             }
+
+            
+
         })
 
 
@@ -227,15 +228,15 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
         
         
     }
-    addListener(component: Listener<SocketEvent>): void {
-
+    addListener(component: SocketListener<SocketEvent>): void {
+        this.listeners.set(component.componentId as number, component)
     }
 
     emit(event: SocketEvent): void {
         SocketManager.getInstance().emit(event.event, event.data)
     }
     removeListener(id: number): void {
-        
+        this.listeners.delete(id)
     }
     getListeners() {
         
@@ -243,11 +244,16 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
     }
     update(dt: number, ctx?: CanvasRenderingContext2D | undefined): void {
         this.time += dt
+        // Get all events that are supposed to be emitted to server
+        // And emit it
         for (let i = this.emissionQueue.length - 1; i >= 0; i--) {
 
             this.emit(this.emissionQueue[i])
             this.emissionQueue.pop()
         }
+        // For all data received from the server
+        // Get the functions registered on client
+        // And call the function with the appropiate data
         this.listenerLock = true
         for (let i of this.listenQueue) {
             
@@ -264,15 +270,77 @@ export class SocketClient implements Emitter<SocketEvent>, Listener<SocketEvent>
             } else {
                 throw new Error()
             }
-            let listener = this.listeners.get(i[0])
-            if (listener) {
-                
-            }
+
             
             
         }
         this.listenQueue.clear()
+
         this.listenerLock = false
+        const interpolationPeriod = 100
+
+        let renderTime = this.time - interpolationPeriod
+        // If there is at least some server data and the current render time is behind by at least 100 ms
+        // As soon as there is at least one snapshot received from server, there will always be at least one snapshot in buffer 
+        if (this.snapshots.length > 0 && renderTime > this.snapshots[0].timestamp) {
+            // If there is more than one snapshot and the server data is now the past for rendering
+            // Delete the first item to use the new more accurate past data
+            // If there is only one past item we keep it for ability to interpolatate based on that point and hopefully future server data comes in
+            // If server data is ahead of rendering time, we can still use that data and the past data to interpolate
+            if (this.snapshots.length > 1 && this.snapshots[1].timestamp < renderTime) {
+                this.snapshots.shift()
+                // Update listeners to make sure there data is updated
+                // We need listeners to store data to make it efficient
+                // We copy data from the past snapshot 
+                let serverData = this.snapshots[0]
+                for (let listener of serverData.data) {
+                    // Checks if entity exists or not by checking whether its component exists or not
+                    let component = this.listeners.get(listener.componentId as number)
+                    // If it exists we copy data over
+                    // If component exists we copy data to storre the previous version of the results
+                    if (component) {
+                        if (component != this) {
+                            component.time = serverData.timestamp
+                            component.copy(listener)
+                        }
+
+                    } else {
+                        // If not we create the entity
+                        let entityFactory = this.entityGenerator.get(listener.entityTag)
+                        if (entityFactory) {
+                            let entity = entityFactory()
+    
+                            if (listener.index >= 0 && listener.index < entity.components.length ) {
+    
+                                entity.id = listener.entity
+                                entity.components[listener.index].copy(listener)
+                                this.stage.addServerEntity(entity)
+                            }
+                            
+                        }
+                    }
+    
+                }
+
+            }
+            // If there is still data to interpolate against
+            if (this.snapshots.length > 1 ) {
+                // Interpolate between past data and future data
+
+            }
+            
+            // Now we need to interpolate between the past data and the next buffer data
+        }
+        // If there is no snapshots then ur screwed anyways
+        // If there is the current time is not ahead by at least 100 ms then wait until it is
+
+
+        // // we update data allowing for interpolation if it is not the emitter listener client
+        // for (let [id, listener] of this.listeners) {
+        //     if (listener != this) {
+        //         listener.update(dt)
+        //     }
+        // }
     }
     queueEvent(event: SocketEvent) {
         this.emissionQueue.push(event)

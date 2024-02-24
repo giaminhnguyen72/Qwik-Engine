@@ -137,7 +137,9 @@ export class SocketServer implements Emitter<SocketEvent> {
         })
     
     }
- 
+    interpolateData(timestamp: number, data: any): void {
+        
+    }
     copy(component: SocketServer): void {
         this.visible = component.visible
         this.alive = component.alive

@@ -1,23 +1,23 @@
 import { io, Socket } from "socket.io-client";
 import { EventHandler } from "../events/EventHandler.js";
-import { Component, Emitter, EngineEvent, Listenable, Listener, Renderable } from "../../types/components.js";
-import { EventSystem, System } from "../../types/system.js";
+import { Component, Emitter, EngineEvent, Listenable, Listener, Renderable, SocketListener } from "../../types/components.js";
+import { EventSystem, SocketEventSystem, System } from "../../types/system.js";
 import { EventConfig, SocketClientConfig } from "../../core/config.js";
 import { SceneManager } from "../../core/managers/SceneManager.js";
 import parser from 'socket.io-msgpack-parser'
 interface SocketEvent extends EngineEvent{
-    eventName: string
-    key: string
+    event: string
+    data: string
 }
-export class SocketManager implements EventSystem<SocketEvent>{
+export class SocketManager implements SocketEventSystem<SocketEvent>{
     static socket: Socket
 
     sceneManager: SceneManager
     tag: string = "SOCKET";
     components: Map<number, Listenable>;
-    emitters: Map<string, Emitter<EngineEvent>> = new Map()
+    emitters: Map<string, Emitter<SocketEvent>> = new Map()
 
-    listeners: Listener<EngineEvent>[] = []
+    listeners: Listener<SocketEvent>[] = []
     config: SocketClientConfig
     deleted: Listenable[] = []
     static getInstance(): Socket {
@@ -41,7 +41,7 @@ export class SocketManager implements EventSystem<SocketEvent>{
     getConfig() {
         return this.config
     }
-    registerListener(component: Listener<EngineEvent>): void {
+    registerListener(component: Listener<SocketEvent>): void {
         let emitter = this.emitters.get(component.getEventType())
         if (emitter) {
             emitter.addListener(component)
@@ -54,7 +54,7 @@ export class SocketManager implements EventSystem<SocketEvent>{
         this.emitters.set(component.getEventType(), component)
         
     }
-    register(comp: Listenable): void {
+    register(comp: SocketListener<SocketEvent>): void {
         if (comp.componentId == undefined || comp.componentId == null) {
 
             let id = this.sceneManager.getUniqueComponentId()
