@@ -75,11 +75,11 @@ export class EventHandler implements System<Listenable>, EventSystem<KeyEvent | 
     
 
     update(dt: number): void {
-        console.log("Event Handler Updating")
         for (let emitter of this.emitters) {
             emitter[1].update(dt)
         }
         for (let i = this.listeners.length - 1; i >= 0; i--) {
+
             let emitter = this.emitters.get(this.listeners[i].getEventType())
             if (emitter) {
                 emitter.addListener(this.listeners[i])

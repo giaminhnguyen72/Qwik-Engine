@@ -19,6 +19,8 @@ interface ReceiverEvent extends SocketEvent {
     data: any
 }
 type Test = {event: string,  callback: (data:any)=> void}
+
+//Socket Servers are basically Rooms
 export class SocketServer implements Emitter<SocketEvent> {
     static isInitialized = false
     static ServerHandler: SocketServer
@@ -71,6 +73,7 @@ export class SocketServer implements Emitter<SocketEvent> {
             SocketServer.Lobby = new Map()
         }
     }
+    
     static GetLobby() {
         if (!SocketServer.Lobby) {
             SocketServer.Lobby = new Map()
@@ -105,6 +108,9 @@ export class SocketServer implements Emitter<SocketEvent> {
         } else {
             
         }
+    }
+    addCharacter(socketID: string, entity: Entity) {
+        this.playerCharacter.set(socketID, entity)
     }
     addPlayer(player: Socket) {
         let SocketHandler = this.events.get("connection")
@@ -253,6 +259,9 @@ export class SocketServer implements Emitter<SocketEvent> {
     }
     removeListener(id: number): void {
         this.listeners.delete(id)
+    }
+    copyData() {
+        
     }
     update(dt: number, ctx?: CanvasRenderingContext2D | undefined): void {
         //console.log("Server Hndler is updating")

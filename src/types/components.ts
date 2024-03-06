@@ -69,6 +69,7 @@ export interface Listener<T extends EngineEvent> extends Listenable {
     getEvents(): Map<string, (evnt: T)=> void>
 }
 export interface SocketListener<T extends EngineEvent> extends Listenable {
+    copyData(listener: SocketListener<T>): void
     entityTag: string
     index: number
     time:number
@@ -76,7 +77,7 @@ export interface SocketListener<T extends EngineEvent> extends Listenable {
     execute(event: T): void
     getEvents(): Map<string, (evnt: T)=> void>
     clone(): SocketListener<T>
-    interpolateData(timestamp: number, data: SocketListener<T>): void
+    interpolateData(currTime: number,timestamp: number, data: SocketListener<T>): void
 }
 export interface Emitter<T extends EngineEvent> extends Listenable {
     

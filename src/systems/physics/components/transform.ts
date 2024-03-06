@@ -30,29 +30,35 @@ export class Transform implements Transformable {
 
 
     }
-    moveTowards(targetPosition: Vector3, dt: number, speed: number, radius: number = 0.05) {
+    moveTowards(targetPosition: Vector3, dt: number, speed: number, radius: number = 0) {
         
         let velNorm = {
             x: targetPosition.x - this.pos.x,
             y: targetPosition.y - this.pos.y,
             z: 0
         }
+        // Distance
         let normalPos = Math.sqrt(velNorm.x* velNorm.x +velNorm.y*velNorm.y)
-        if (normalPos > 0) {
-            velNorm.x /= normalPos
-            velNorm.y /= normalPos
+        if (normalPos >= radius ) {
+            if (normalPos > 0) {
+                velNorm.x /= normalPos
+                velNorm.y /= normalPos
+            } else {
+                velNorm.x = 0
+                velNorm.y = 0
+            }
+            
+    
+            velNorm.x *= speed
+            velNorm.y *= speed
+    
+            this.pos.x += velNorm.x *dt
+            this.pos.y += velNorm.y *dt
+            return velNorm
         } else {
-            velNorm.x = 0
-            velNorm.y = 0
+            return this.pos
         }
-        
 
-        velNorm.x *= speed
-        velNorm.y *= speed
-
-        this.pos.x += velNorm.x *dt
-        this.pos.y += velNorm.y *dt
-        return velNorm
     }
     copy(transform: Transform): void {
         
@@ -77,7 +83,9 @@ export class Transform implements Transformable {
     
     
     update(dt: number): void {
-
+        if (this.vel.x > 0 || this.vel.x < 0) {
+            console.log("updatinh " + this.componentId)
+        }
         this.vel.x = this.vel.x  + this.accel.x * dt
         this.vel.y = this.vel.y  + this.accel.y * dt
         this.vel.z = this.vel.z  + this.accel.z * dt

@@ -28,11 +28,13 @@ export class Script implements ScriptObject {
     properties: Map<string, any> = new Map()
     callback?: (dt: number, data?: any ) => void
     init?: (engine: ScriptingEngine) => void
-    constructor(className: string,  engineType: EngineType = EngineType.CLIENTONLY,callback?: (dt: number, data: any ) => void, init?: (engine: ScriptingEngine) => void,) {
+    destroy?: () => void
+    constructor(className: string,  engineType: EngineType = EngineType.CLIENTONLY,callback?: (dt: number, data: any ) => void, init?: (engine: ScriptingEngine) => void,destroy?: ()=> void) {
         this.callback = callback
         this.className = className
         this.engineType = engineType
         this.init = init
+        this.destroy = destroy
     }
     copy(script: Script): void {
         this.className = script.className
@@ -58,7 +60,14 @@ export class Script implements ScriptObject {
         }
         return []
     }
-    
+    addEntity(entity: Entity): Entity {
+        return this.system.sceneManager.getCurrentScene().addEntity(entity)
+    }
+    removeEntity(id: number) {
+        this.system.sceneManager.getCurrentScene().removeEntity(id)
+    }
+
+
     setProperty(property:string, initialValue: any ) {
 
         this.properties.set(property, initialValue)

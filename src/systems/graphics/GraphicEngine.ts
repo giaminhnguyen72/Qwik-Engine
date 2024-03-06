@@ -14,7 +14,7 @@ import { PriorityQueue } from "../../structs/PriorityQueue.js"
 import { PainterStrategy, RenderStrategy } from "./RenderingStrategy/RenderingStrategy.js"
 import { QuadTreeStrategy } from "./RenderingStrategy/QuadTreeRendering.js"
 import { Camera } from "./components/2d/Camera.js"
-import { Scene as SceneGraph, WebGLRenderer } from "three"
+import { OrthographicCamera, Scene as SceneGraph, WebGLRenderer } from "three"
 import { Rendering3d } from "./RenderingStrategy/Rendering3d.js"
     function resizeRendererToDisplaySize(renderer: WebGLRenderer) {
       const canvas = renderer.domElement;
@@ -37,7 +37,7 @@ export class GraphicsEngine implements System<Renderable>{
     rendering: Renderable[] = []
     UIComponents: Set<number> = new Set()
     cameras: Map<number, Camera> = new Map()
-    mainCamera?: Renderable
+    mainCamera: OrthographicCamera
     renderer: WebGLRenderer
     sceneGraph: SceneGraph
     constructor(sceneManager: SceneManager, graphicsConfig: GraphicsConfig) {
@@ -45,7 +45,7 @@ export class GraphicsEngine implements System<Renderable>{
         this.components = new Map<number, Renderable>()
         this.deleted = []
         this.sceneManager = sceneManager
-        
+        this.mainCamera = new OrthographicCamera(-1, 1, 1,-1,0, 2000)
         this.contextInfo = new ContextInfo(graphicsConfig)
         this.renderer = new WebGLRenderer({antialias: true, canvas: this.contextInfo.realCanvas  })
         window.onresize = () => {
@@ -97,7 +97,7 @@ export class GraphicsEngine implements System<Renderable>{
                 this.rendering.push(comp)
             } else {
                 let hasCamera = this.cameras.get(comp.componentId)
-                console.log("Assd")
+
                 if (!hasCamera) {
                     this.renderStrategy.registerStrategy(comp)
                 }
@@ -140,10 +140,6 @@ export class GraphicsEngine implements System<Renderable>{
             }
         }
     
-    setMainCamera(componentId: number) {
-        let camera = this.components.get(componentId)
-        this.mainCamera = camera
-    }
     addUIComponent(component: Renderable) {
         this.UIComponents.add(component.componentId as number)
     }
@@ -170,7 +166,16 @@ export class GraphicsEngine implements System<Renderable>{
         }
         //console.log("Rendering Components: " + this.rendering.length
         let cameras = [...this.cameras.values()]
+        
         this.renderStrategy.render(cameras)
+        this.renderer.autoClear = false
+        for (let i of this.UIComponents) {
+            let ui = this.components.get((i))
+            if (ui) {
+                ui.render(cameras[0])
+            }
+        }
+        this.renderer.autoClear = true
         //let bitmapOffScreen = this.contextInfo.canvas.transferToImageBitmap()
         //let canvaRenderer = this.contextInfo.realCanvas.getContext("bitmaprenderer")
         //if (canvaRenderer) {

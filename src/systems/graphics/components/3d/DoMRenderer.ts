@@ -21,45 +21,47 @@ export class UIComponent implements Renderable {
     componentId?: number | undefined;
 
     pos: Position
-    height: number
-    width:number
-    parent: Renderable & {component: Object3D}
-    children: (Renderable & {component: Object3D})[] = []
-    plane!: THREE.Mesh
+    boundingBox: Rectangle
+    parent?: Renderable & {component: Object3D}
+    children: (Renderable & {component: Object3D, parent?: Renderable & {component: Object3D}})[] = []
+    component!: THREE.Mesh
     binded: boolean = false
     alignment: number = 0
-    constructor(width: number=-1, height: number = -1, curr: Position={x:0,y:0,z:-1} , camera: Renderable & {component: Object3D}, alignment: number =0 ) {
-        
-        this.height = height
-        this.width = width
+    color: number
+    constructor(width: number=-1, height: number = -1, curr: Position={x:0,y:0,z:-1} ,  alignment: number =0, color: number = 0x42280E, ...children: UIComponent[] ) {
+        this.boundingBox = {
+            pos:curr,
+            dim: {
+                length: width,
+                height: height
+            },
+            rot: 0
+        }
+        this.color= color
+        this.children = children
         this.pos= curr
         this.pos.z = 0
-        let bounds = camera.getRectangle()
+
         if (alignment == 0) {
-            this.pos.y = this.pos.y - bounds.dim.height / 2 + this. height /2
+            this.pos.y = this.pos.y - 1  + this.boundingBox.dim.height /2
         }
-        let boundingWidth = bounds.dim.length
-        let boundingHeight = bounds.dim.height
-        let left = this.pos.x - this.width / 2
-        let right = this.pos.x + this.width / 2
-        let top = this.pos.y + this.height / 2
-        let bottom = this.pos.y - this.height / 2
-        
-        this.parent = camera
 
 
 
         
     }
     unmount(): void {
-        this.parent.component.parent?.remove(this.parent.component)
+        this.parent?.component.parent?.remove(this.parent.component)
+        for(let i of this.children) {
+            i.unmount()
+        }
     }
     getRectangle(): Rectangle {
         return {
             pos: this.pos,
             dim: {
-                height: this.height,
-                length: this.width,
+                height: this.boundingBox.dim.height,
+                length: this.boundingBox.dim.length,
             },
             rot: 0
         }
@@ -72,8 +74,8 @@ export class UIComponent implements Renderable {
         this.pos.z = camera.pos.z
 
         this.componentId = camera.componentId
-        this.width =camera.width
-        this.height =camera.height
+        this.boundingBox.dim.length =this.boundingBox.dim.length
+        this.boundingBox.dim.height =this.boundingBox.dim.height
         this.visible = camera.visible
         this.alive = camera.alive
         this.rendered = camera.rendered
@@ -85,26 +87,43 @@ export class UIComponent implements Renderable {
     }
 
     initialize(graphics: GraphicsEngine): void {
-        let planeGeo = new THREE.PlaneGeometry(this.width, this.height)
-        const material = new THREE.MeshBasicMaterial( {color: 0x42280E, side: THREE.DoubleSide} );
-        const plane = new THREE.Mesh( planeGeo, material );
-        this.plane = plane
         
+        let length: number= this.boundingBox.dim.length;
+        let height: number = this.boundingBox.dim.height;
+        if (this.parent) {
+            let boundingBox = this.parent.getRectangle()
+            this.boundingBox.dim.length *= boundingBox.dim.length 
+            this.boundingBox.dim.height *= boundingBox.dim.height 
+        } else {
+            graphics.addUIComponent(this)
+        }
+        let componentGeo = new THREE.PlaneGeometry(this.boundingBox.dim.length, this.boundingBox.dim.height)
+        const material = new THREE.MeshBasicMaterial( {color: this.color, side: THREE.DoubleSide, opacity:0.2} );
 
-        
-        
-
+        const component = new THREE.Mesh( componentGeo, material );
+        this.component = component
+        for (let i of this.children) {
+            i.parent = this
+            i.initialize(graphics)
+            this.component.add(i.component)
+        }
 
     }
     update(dt: number): void {
 
         if (this.parent && !this.binded) {
-            this.parent.component.add(this.plane)
+            this.parent.component.add(this.component)
+            this.binded = true
+        } else if (!this.parent && !(this.binded)) {
+            this.system.mainCamera.add(this.component)
             this.binded = true
         }
+        this.component.position.set(this.pos.x, this.pos.y, 0)
+
+
         
         
-        this.plane.position.set(this.pos.x, this.pos.y, 0)
+        
 
     
         
@@ -114,12 +133,16 @@ export class UIComponent implements Renderable {
         
     }
     render(): void {
-        
+
+        if (this.binded) {
+            this.system.renderer.clearDepth()
+            this.system.renderer.render(this.component, this.system.mainCamera)
+        }
         
     }
     renderCamera(array: Renderable[]): void {
         if (this.visible) {
-            console.log("rendering orthographic")
+
             
             
         //console.log("Camera is rendered " + items.length + "elements")
@@ -128,13 +151,19 @@ export class UIComponent implements Renderable {
         }
         
     }
+    setMaterial(materialMap: {color: number, src?: string} ) {
+        if (materialMap.color) {
+            let material = this.component.material as THREE.MeshBasicMaterial
+            material.color.setHex(materialMap.color)
+        }
+    }
     toJSON() {
         return {
             entity: this.entity,
         
             componentId: this.componentId,
-            width: this.width,
-            height: this.height,
+            width: this.boundingBox.dim.length,
+            height: this.boundingBox.dim.height,
             visible: this.visible,
             alive: this.alive,
 

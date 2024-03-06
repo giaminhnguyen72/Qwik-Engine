@@ -42,7 +42,7 @@ export class Engine {
             this.systems.push(new PhysicsEngine(this.sceneManager, Engine.engineConfig.physicsConfig))
         }
         if (Engine.engineConfig.scriptingConfig) {
-            this.systems.push( new ScriptingEngine(this.sceneManager, Engine.engineConfig.engineType))
+            this.systems.push( new ScriptingEngine(this.sceneManager, {engineType: Engine.engineConfig.engineType}))
         }
 
         if (Engine.engineConfig.collisionConfig) {

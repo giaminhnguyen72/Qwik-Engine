@@ -109,7 +109,7 @@ export class CollisionConfig {
     bounds?: {topX: number, topY: number, bottomX: number, bottomY: number, wallCollide: (colider: Collideable) => void}
 }
 export class ScriptingConfig {
-    
+    engineType: EngineType = EngineType.CLIENTONLY
 }
 
 export class SocketServerConfig {

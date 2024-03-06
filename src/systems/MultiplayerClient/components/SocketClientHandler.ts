@@ -35,6 +35,7 @@ export class SocketClient implements Emitter<SocketEvent>, SocketListener<Socket
     entityGenerator: Map<string, () => Entity> = new Map()
     time: number= 0
     initialized: boolean = false
+    deleted = new Set<number>
     constructor(multiplayerStage: Stage, socketMap: {[key:string]:(data: any)=>void}, socketConfig: {engineType: EngineType, entityGeneratorMap?: Map<string,() => Entity>}) {
 
         this.stage = multiplayerStage
@@ -99,13 +100,16 @@ export class SocketClient implements Emitter<SocketEvent>, SocketListener<Socket
             console.log("Nothing has been removed so far")
 
             for (let i of data) {
+                this.deleted.add(i)
                 let currScene = this.stage
                 let entity = currScene.entities.get(i)
                 if (entity) {
                     currScene.removeEntity(entity.id as number)
                     console.log("Entity " + entity.id + " has been removed")
 
-                } 
+                } else {
+                    throw new Error(" Entity is not found")
+                }
             }
 
         })
@@ -242,6 +246,9 @@ export class SocketClient implements Emitter<SocketEvent>, SocketListener<Socket
         
         return [this]
     }
+    copyData() {
+
+    }
     update(dt: number, ctx?: CanvasRenderingContext2D | undefined): void {
         this.time += dt
         // Get all events that are supposed to be emitted to server
@@ -297,16 +304,31 @@ export class SocketClient implements Emitter<SocketEvent>, SocketListener<Socket
                     // Checks if entity exists or not by checking whether its component exists or not
                     let component = this.listeners.get(listener.componentId as number)
                     // If it exists we copy data over
-                    // If component exists we copy data to storre the previous version of the results
+                    // If component exists we dcopy data to storre the previous version of the results
+                    // We do copy the server data into each component becuse each component stores the past server data
                     if (component) {
                         if (component != this) {
                             component.time = serverData.timestamp
-                            component.copy(listener)
+                            // This copies the past server data to nterpolate against
+                            component.copyData(listener)
+                                        // If there is still data to interpolate against
+                            if (this.snapshots.length > 1 ) {
+                                // Interpolate between past data and future data
+                                let updatedSnapshot = this.snapshots[1]
+                                for (let listener of updatedSnapshot.data) {
+                                    let component = this.listeners.get(listener.componentId as number)
+                                    if (component) {
+                                        component.interpolateData(renderTime ,updatedSnapshot.timestamp, listener)
+                                    }
+                                }
+                            }
                         }
 
                     } else {
                         // If not we create the entity
-                        let entityFactory = this.entityGenerator.get(listener.entityTag)
+                        let entity = listener.entity as number
+                        if (!this.deleted.has(entity))
+                        {let entityFactory = this.entityGenerator.get(listener.entityTag)
                         if (entityFactory) {
                             let entity = entityFactory()
     
@@ -314,20 +336,19 @@ export class SocketClient implements Emitter<SocketEvent>, SocketListener<Socket
     
                                 entity.id = listener.entity
                                 entity.components[listener.index].copy(listener)
+                                let c = entity.components[listener.index] as SocketListener<SocketEvent>
+                                c.time = serverData.timestamp
+                                c.copyData(listener)
                                 this.stage.addServerEntity(entity)
                             }
                             
-                        }
+                        }}
                     }
     
                 }
 
             }
-            // If there is still data to interpolate against
-            if (this.snapshots.length > 1 ) {
-                // Interpolate between past data and future data
 
-            }
             
             // Now we need to interpolate between the past data and the next buffer data
         }

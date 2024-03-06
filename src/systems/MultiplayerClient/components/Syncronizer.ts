@@ -25,14 +25,14 @@ interface SocketEvent extends EngineEvent{
     // Use in server to decide which data to send
     returnData: () => Data
     // update item mostly for interpolation
-    updateFunc?: (dt: number) => void
+    updateFunc?: (currTime: number, timestamp: number, data:MultiplayerSyncronizer<T , Data>) => void
     // Store previous data
     data?: Data
     index: number = -1
     currEntity:Entity
     // Time store previous time stamp
     time: number = 0
-    constructor(entity: Entity, copyFunc: (data: Data) => void, returnData: () => Data, updateFunc?: (dt: number) => void ) {
+    constructor(entity: Entity, copyFunc: (data: Data) => void, returnData: () => Data, updateFunc?: (currTime: number, timestamp: number, data:MultiplayerSyncronizer<T , Data>) => void ) {
         this.entityTag = entity.className
         //Only use in client
         this.currEntity = entity
@@ -41,9 +41,14 @@ interface SocketEvent extends EngineEvent{
         this.updateFunc = updateFunc
 
     }
-    interpolateData(timestamp: number,data: SocketListener<EngineEvent> ): void {
+    interpolateData(currTime: number, futureTimestamp: number,data: MultiplayerSyncronizer<T , Data> ): void {
         // if the diffrence between the current time and the timestamp given is within a 0.001 ms of time it is considered the same time
         // this is because time for sycronizers is storing the past time
+        if (this.updateFunc) {
+            this.updateFunc(currTime, futureTimestamp, data)
+        } else {
+            this.copy(data as any)
+        }
 
 
     }
@@ -61,6 +66,11 @@ interface SocketEvent extends EngineEvent{
             throw new Error("Cannot find Sycronizer")
         }
 
+    }
+    copyData(listener: MultiplayerSyncronizer<T, Data>): void {
+        if (listener.data) {
+            this.data = listener.data
+        }
     }
     //Used for lag compnesation probably
     clone() {
@@ -92,9 +102,7 @@ interface SocketEvent extends EngineEvent{
     }
     // Used for clients to update for interpolation
     update(dt: number, ctx?: CanvasRenderingContext2D | undefined): void {
-        if (this.updateFunc) {
-            this.updateFunc(dt)
-        }
+
     }
     //Copies Data over to component
     // Copies data from server to correct components using functions
@@ -105,6 +113,8 @@ interface SocketEvent extends EngineEvent{
             let c = component
             if (c.data) {
                 this.copyFunc(c.data)
+                console.log("New entity has been created")
+                this.data = c.data
             }
             
         }

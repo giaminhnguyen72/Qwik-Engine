@@ -5,6 +5,7 @@ import { Component, Emitter, EngineEvent, Listenable, Listener } from "../../../
 import { Position } from "../../../types/components/physics/transformType.js";
 import { Entity } from "../../../types/Entity.js";
 import { EventSystem, System } from "../../../types/system.js";
+import { UIListener } from "./UIListener.js";
 
 
 export class MouseListener implements Listener<ClickEvent> {
@@ -148,6 +149,7 @@ export class MouseEmitter implements Emitter<ClickEvent> {
 }
 export class MouseEmitter3d implements Emitter<ClickEvent> {
     listeners: Map<number, Listener<ClickEvent>> = new Map()
+    UIListener: Map<number, UIListener> = new Map()
     events: ClickEvent[] = []
     entity?: number | undefined;
     visible: boolean = true;
@@ -156,7 +158,8 @@ export class MouseEmitter3d implements Emitter<ClickEvent> {
     componentId?: number | undefined;
     system!: System<Component>;
     engineType:EngineType 
-    maxInput: number = 10
+    maxInput: number = 1
+    
     constructor(engine: EngineType) {
         this.engineType = engine
     }
@@ -191,7 +194,14 @@ export class MouseEmitter3d implements Emitter<ClickEvent> {
         }
     }
     addListener(component: Listener<ClickEvent>): void {
-        this.listeners.set(component.componentId as number, component)
+
+        if (component instanceof UIListener) {
+            console.log("UI Listener is registered")
+            this.UIListener.set(component.componentId as number, component)
+        } else {
+            console.log("Mouse Listener is registered")
+            this.listeners.set(component.componentId as number, component)
+        }
     }
     emit(event: ClickEvent): void {
         for (let listener of this.listeners) {
@@ -209,8 +219,18 @@ export class MouseEmitter3d implements Emitter<ClickEvent> {
     }
     
     update(dt: number, ctx?: CanvasRenderingContext2D | undefined): void {
+        
         for (let i = this.events.length - 1; i >= 0; i--) {
-            this.emit(this.events[i])
+            let clicked = false
+            console.log("There are " + this.UIListener.size )
+            for (let listener of this.UIListener) {
+                clicked = clicked || listener[1].isClicked(this.events[i])
+
+            }
+            if (!clicked) {
+                this.emit(this.events[i])
+            }
+            
             this.events.pop()
         }
     }

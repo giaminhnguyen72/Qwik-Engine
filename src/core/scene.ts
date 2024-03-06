@@ -120,19 +120,22 @@ export class Stage implements Scene, Entity {
     }
 
     addEntity(entity: Entity): Entity {
+        let uniqueId = this.sceneManager.getUniqueId()
+
+        entity.id = uniqueId
         this.addedEntities.push(entity)
         return entity
     }
     executeEntityAdd(entity: Entity) {
-        let uniqueId = this.sceneManager.getUniqueId()
-
-    entity.id = uniqueId
+        if (!entity.id ) {
+            throw new Error()
+        }
     entity.scene = this
-
+    let uniqueId = entity.id as number
     this.entities.set(uniqueId, entity)
     let entityMap = this.classMap.get(entity.className)
         if (entityMap) {
-            entityMap.set(entity.id, entity)
+            entityMap.set(entity.id as number, entity)
         } else {
             let newMap = new Map()
             newMap.set(entity.id, entity)
@@ -169,13 +172,9 @@ export class Stage implements Scene, Entity {
     
     if (entity) {
         this.entities.delete(id)
+        console.log("id: " + id)
         for (let c of entity.components) {
-            console.log("Component")
-            console.log(c)
-            console.log("System")
-            console.log(c.system)
-            console.log("Component id ")
-            console.log(c.componentId)
+            console.log("Component id: " + c.componentId)
             if (this.querySys(c.engineTag)) {
                 c.system.unregister(c.componentId as number) 
             }
@@ -185,6 +184,8 @@ export class Stage implements Scene, Entity {
         
         
         
+    } else {
+        throw new Error("Entity not found")
     }
 
     return entity

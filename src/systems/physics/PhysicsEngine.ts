@@ -41,12 +41,12 @@ export class PhysicsEngine implements System<Transformable>{
 
     }
     unregister(comp: number): void {
-        let deleted = this.components.get(comp) 
+        this.components.delete(comp)
+        console.log("Component " + comp)
+       
+       let deleted = this.components.get(comp) 
        if (deleted) {
-            deleted.alive = false
-
-            this.deleted.push(deleted)
-            
+        throw new Error()
        }
     
     }

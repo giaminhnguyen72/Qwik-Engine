@@ -111,19 +111,23 @@ export class MultiplayerStage implements Scene, Entity {
   
     addEntity( entity: Entity): Entity {
         console.log("Entity added")
+        let uniqueId = this.sceneManager.getUniqueId()
+        entity.id = uniqueId
         this.addedEntities.push(entity)
         return entity
         
     }
     executeEntityAdd(entity:Entity) {
-        let uniqueId = this.sceneManager.getUniqueId()
-        entity.id = uniqueId
+        if (!entity.id) {
+            throw new Error()
+        }
+        let uniqueId = entity.id as number
         entity.scene = this
 
         this.entities.set(uniqueId, entity)
         let entityMap = this.classMap.get(entity.className)
         if (entityMap) {
-            entityMap.set(entity.id, entity)
+            entityMap.set(entity.id as number, entity)
         } else {
             let newMap = new Map()
             newMap.set(entity.id, entity)
@@ -171,18 +175,17 @@ export class MultiplayerStage implements Scene, Entity {
 
         } 
         for (let c of entity.components) {
-            console.log("Component")
-            console.log(c)
-            console.log("System")
-            console.log(c.system)
-            console.log("Component id ")
-            console.log(c.componentId)
+
             if (this.querySys(c.engineTag)) {
                 c.system.unregister(c.componentId as number)
             }
             
         }
-        SocketServer.getInstance(EngineType.SOCKETSERVER).deleted.push(id)
+        for (let i of this.components) {
+            if (i instanceof SocketServer) {
+                i.deleted.push(id)
+            }
+        }
         
 
     }

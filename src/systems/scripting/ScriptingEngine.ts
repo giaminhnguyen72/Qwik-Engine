@@ -2,6 +2,7 @@ import { Script, ScriptObject } from "./components/Script.js";
 import { EngineType } from "../../constants/engineType.js";
 import { SceneManager } from "../../core/managers/SceneManager.js";
 import { System } from "../../types/system.js";
+import { ScriptingConfig } from "../../core/config.js";
 export class ScriptingEngine implements System<ScriptObject> {
     tag: string ="SCRIPTING"  ;
     components: Map<number, Script>;
@@ -9,14 +10,39 @@ export class ScriptingEngine implements System<ScriptObject> {
     engineType: EngineType
     sceneManager!: SceneManager
     objectDB: Map<string, Set<Script>> = new Map()
-    fieldDB: Map<string, string[]> = new Map()
-
-
-
-    constructor(sceneManager: SceneManager, engineType: EngineType) {
+    updateSystems:Map<number, Script> = new Map()
+    constructor(sceneManager: SceneManager, engineType: ScriptingConfig) {
         this.components = new Map<number, Script>()
-        this.engineType = engineType
+        this.engineType = engineType.engineType
         this.sceneManager = sceneManager
+    }
+    addSuperClass(script:Script, superclass:string) {
+        let objectSet = this.objectDB.get(superclass)
+        if (objectSet) {
+            objectSet.add(script)
+        } else {
+            let set:Set<Script> = new Set()
+            set.add(script)
+            this.objectDB.set(superclass,set)
+        }
+    }
+    addSuperClasses(script:Script, ...superclasses: string[]) {
+        for (let superclass of superclasses) {
+            this.addSuperClass(script, superclass)
+        }
+        script.destroy = () => {
+            for (let i of superclasses) {
+                this.removeSuperClass(script, i)
+            }
+        }
+    }
+    removeSuperClass(script:Script, superclass:string) {
+        let objectSet = this.objectDB.get(superclass)
+        if (objectSet) {
+            objectSet.delete(script)
+        } else {
+
+        }
     }
     queryClass(className :string) {
         let item = this.objectDB.get(className);
@@ -24,44 +50,11 @@ export class ScriptingEngine implements System<ScriptObject> {
             
             return item
         } else {
-            return []
+            return undefined
         }
 
     }
-    addFieldEntry(field: string, classString:string) {
-        let classEntries = this.fieldDB.get(field)
-        if (classEntries) {
-            for (let i of classEntries) {
-                if (i == classString) {
-                    return
-                }
-            }
-            classEntries.push(classString)
-        } else {
-            let arr = []
-            arr.push(classString)
-            this.fieldDB.set(field, arr)
-        }
-    }
-    queryFields(field: string) {
 
-        let classEntries = this.fieldDB.get(field)
-        let scriptObjects: Script[] = []
-        if (classEntries){
-            for (let i of classEntries) {
-                let classes = this.objectDB.get(i)
-                if (classes) {
-                    for (let c of classes) {
-                        scriptObjects.push(c)
-                    }
-                }
-                
-            }
-            return scriptObjects
-        } else {
-            return []
-        }
-    }
 
     
 
@@ -73,7 +66,7 @@ export class ScriptingEngine implements System<ScriptObject> {
             this.components.set(id, comp)
             
         }  else {
-            comp.componentId = id
+
             comp.system = this
             this.components.set(comp.componentId, comp)
         }
@@ -86,6 +79,9 @@ export class ScriptingEngine implements System<ScriptObject> {
             this.objectDB.set(comp.className, set)
         }
 
+        if (comp.callback) {
+            this.updateSystems.set(comp.componentId, comp)
+        }
         this.initialize(comp)
 
         
@@ -97,6 +93,12 @@ export class ScriptingEngine implements System<ScriptObject> {
             deleted.alive = false
 
             this.deleted.push(deleted)
+            if (deleted.callback) {
+                this.updateSystems.delete(comp)
+            }
+            if (deleted.destroy) {
+                deleted.destroy()
+            }
             let set = this.objectDB.get(deleted.className)
             if (set) {
                 set.delete(deleted)
@@ -114,7 +116,7 @@ export class ScriptingEngine implements System<ScriptObject> {
     update(dt: number): void {
         //console.log("Scripting engine running")
         //console.log("Scripting Components: " + this.components.size)
-        for (let comp of this.components) {
+        for (let comp of this.updateSystems) {
             if (comp[1].engineType == this.engineType) {
                 comp[1].update(dt)
             } else if (comp[1].engineType = EngineType.BOTH) {
@@ -123,7 +125,7 @@ export class ScriptingEngine implements System<ScriptObject> {
             
         }
         while (this.deleted.length > 0 ) {
-            console.log("Entity i deleted       A         D")
+
             let comp = this.deleted.pop()
             this.components.delete(comp?.componentId as number)
 

@@ -116,9 +116,7 @@ export class OrthographicCamera3d implements Renderable {
         }
         
     }
-    makeCurrentCamera() {
-        this.system.mainCamera = this
-    }
+
     toJSON() {
         return {
             entity: this.entity,
